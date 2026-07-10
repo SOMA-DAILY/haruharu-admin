@@ -1,0 +1,29 @@
+#!/bin/bash
+# 시크릿/환경파일 커밋 차단 (프런트) — secret-policy.md 참조
+
+STAGED=$(git diff --staged --name-only)
+
+# 1. .env 계열 커밋 차단 (.env.example 만 허용)
+BLOCKED=$(echo "$STAGED" | grep -E "(^|/)\.env(\.local|\.[^/]*\.local|\.[^/]*)?$" | grep -v "\.env\.example$")
+if [ -n "$BLOCKED" ]; then
+    echo "BLOCKED: .env 계열 파일은 커밋할 수 없습니다 (.env.example 만 허용)."
+    echo "$BLOCKED"
+    exit 1
+fi
+
+# 2. staged 소스에서 하드코딩 시크릿 탐지
+SCAN=$(echo "$STAGED" | grep -E "\.(ts|tsx|js|jsx|json|env\.example)$")
+for file in $SCAN; do
+    [ -f "$file" ] || continue
+    # JWT 토큰 패턴 / 비밀번호·시크릿·api-key 하드코딩
+    HITS=$(git show ":$file" 2>/dev/null | grep -nE \
+        "eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|(password|secret|api[_-]?key|private[_-]?key|credential)\s*[:=]\s*['\"][^'\"]{6,}" \
+        | grep -viE "placeholder|example|process\.env|import\.meta\.env|\$\{")
+    if [ -n "$HITS" ]; then
+        echo "BLOCKED: $file 에 하드코딩된 시크릿/토큰이 감지되었습니다."
+        echo "$HITS"
+        exit 1
+    fi
+done
+
+exit 0
