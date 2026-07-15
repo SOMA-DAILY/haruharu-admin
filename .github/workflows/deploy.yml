@@ -1,0 +1,52 @@
+name: Deploy (dev)
+
+# develop 머지(=push) 시 자동 배포. 필요 시 수동 실행도 가능.
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+permissions:
+  id-token: write # OIDC 로 AWS 역할 assume
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          # 배포 빌드는 어드민 API 절대주소로 호출(브라우저 크로스오리진, CORS 허용 필요).
+          VITE_API_BASE_URL: https://dev-api.haruharu.co.kr
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync to S3
+        run: aws s3 sync dist/ "s3://${{ vars.AWS_S3_BUCKET }}" --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
