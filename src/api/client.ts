@@ -17,8 +17,10 @@ export const tokenStore = {
   },
 }
 
+// dev에선 VITE_API_BASE_URL 을 비워 상대경로(/api/v1/admin)로 요청 → Vite 프록시가 CORS 우회.
+// prod 빌드에선 실제 어드민 서버 절대 URL 을 지정.
 export const http = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/v1/admin`,
+  baseURL: `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/admin`,
   timeout: 15000,
 })
 
