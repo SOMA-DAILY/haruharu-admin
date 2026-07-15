@@ -105,7 +105,8 @@ export default function AdminLayout() {
         </div>
       </Sider>
       <Layout>
-        <Content style={{ padding: 24 }}>
+        {/* 대시보드는 목업처럼 full-bleed 상단바 → 자체 패딩 사용, 그 외 페이지는 기본 여백 */}
+        <Content style={{ padding: location.pathname === '/' ? 0 : 24 }}>
           <Outlet />
         </Content>
       </Layout>
