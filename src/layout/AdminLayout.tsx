@@ -5,6 +5,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { navItems } from '../config/nav'
 import { colors } from '../theme'
 import { useAuth } from '../auth/AuthContext'
+import { useDashboardSummary } from '../api/queries'
 
 const { Sider, Content } = Layout
 
@@ -12,6 +13,12 @@ export default function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { me, logout } = useAuth()
+  const { data: summary } = useDashboardSummary()
+
+  // 라우트별 실데이터 배지 (현재: 세션 = 진행중 방 수)
+  const badgeByKey: Record<string, number | undefined> = {
+    '/sessions': summary?.active_rooms.total,
+  }
 
   // nav 항목을 group별로 묶어 antd Menu 구조로 변환
   const menuItems = useMemo(() => {
@@ -25,24 +32,28 @@ export default function AdminLayout() {
       label: group,
       children: navItems
         .filter((n) => n.group === group)
-        .map((n) => ({
-          key: n.key,
-          icon: n.icon,
-          disabled: n.disabled,
-          label: (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {n.label}
-              {n.badge != null && <Badge count={n.badge} size="small" />}
-              {n.tag && (
-                <Tag style={{ marginLeft: 'auto', fontSize: 11 }} color="default">
-                  {n.tag}
-                </Tag>
-              )}
-            </span>
-          ),
-        })),
+        .map((n) => {
+          const badgeCount = badgeByKey[n.key]
+          return {
+            key: n.key,
+            icon: n.icon,
+            disabled: n.disabled,
+            label: (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {n.label}
+                {badgeCount != null && badgeCount > 0 && <Badge count={badgeCount} size="small" />}
+                {n.tag && (
+                  <Tag style={{ marginLeft: 'auto', fontSize: 11 }} color="default">
+                    {n.tag}
+                  </Tag>
+                )}
+              </span>
+            ),
+          }
+        }),
     }))
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary?.active_rooms.total])
 
   // 현재 경로에 맞는 최상위 메뉴 선택 (상세 페이지는 부모 목록 하이라이트)
   const selectedKey = useMemo(() => {

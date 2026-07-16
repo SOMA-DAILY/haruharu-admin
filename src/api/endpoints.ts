@@ -1,6 +1,7 @@
 import { get, post } from './client'
 import type {
   AdminMe,
+  DashboardMetrics,
   DashboardSummary,
   LoginRequest,
   Paged,
@@ -20,9 +21,14 @@ export const authApi = {
   me: () => get<AdminMe>('/me'),
 }
 
-// ===== 대시보드 (#189) =====
+// ===== 대시보드 (#189 · metrics #244) =====
+export interface MetricsQuery {
+  from?: string // YYYY-MM-DD (옵션, 미지정 시 최근 14일)
+  to?: string
+}
 export const dashboardApi = {
   summary: () => get<DashboardSummary>('/dashboard/summary'),
+  metrics: (q?: MetricsQuery) => get<DashboardMetrics>('/dashboard/metrics', q),
 }
 
 // ===== 세션(방) (#191) =====

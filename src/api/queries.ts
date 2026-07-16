@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi, roomsApi, usersApi } from './endpoints'
-import type { RoomListQuery, UserListQuery } from './endpoints'
+import type { MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
 
 export const useDashboardSummary = () =>
   useQuery({ queryKey: ['dashboard', 'summary'], queryFn: dashboardApi.summary })
+
+export const useDashboardMetrics = (q?: MetricsQuery) =>
+  useQuery({ queryKey: ['dashboard', 'metrics', q], queryFn: () => dashboardApi.metrics(q) })
 
 export const useRooms = (q: RoomListQuery) =>
   useQuery({ queryKey: ['rooms', q], queryFn: () => roomsApi.list(q) })
