@@ -15,7 +15,6 @@ export type NavItem = {
   label: string
   icon: ReactNode
   group: string
-  badge?: number
   disabled?: boolean
   tag?: string // 비활성 사유(추후/준비중)
 }
@@ -23,9 +22,10 @@ export type NavItem = {
 // 목업 사이드바(admin-dashboard-mockup.html) 기준
 export const navItems: NavItem[] = [
   { key: '/', label: '대시보드', icon: <DashboardOutlined />, group: '모니터링' },
-  { key: '/sessions', label: '세션(방) 관리', icon: <HomeOutlined />, group: '운영', badge: 12 },
+  // 세션 배지는 AdminLayout에서 active_rooms.total(실데이터)로 주입
+  { key: '/sessions', label: '세션(방) 관리', icon: <HomeOutlined />, group: '운영' },
   { key: '/users', label: '유저 관리', icon: <UserOutlined />, group: '운영' },
-  { key: '/iap', label: '재화·결제(IAP)', icon: <CreditCardOutlined />, group: '운영', badge: 2 },
+  { key: '/iap', label: '재화·결제(IAP)', icon: <CreditCardOutlined />, group: '운영' },
   {
     key: '/moderation',
     label: '미션 영상 검수',
