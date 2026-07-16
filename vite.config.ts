@@ -13,7 +13,15 @@ export default defineConfig(({ mode }) => {
     server: proxyTarget
       ? {
           proxy: {
-            '/api': { target: proxyTarget, changeOrigin: true },
+            '/api': {
+              target: proxyTarget,
+              changeOrigin: true,
+              // 프록시는 서버-서버라 브라우저 Origin이 불필요. 제거해 백엔드 CORS 필터에
+              // 걸리지 않게 함(로컬 오리진이 dev 허용목록에 없어도 동작).
+              configure: (proxy) => {
+                proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'))
+              },
+            },
           },
         }
       : undefined,
