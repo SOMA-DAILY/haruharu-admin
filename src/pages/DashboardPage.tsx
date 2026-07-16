@@ -1,7 +1,8 @@
-import { Alert, Skeleton } from 'antd'
+import { Alert, Empty, Skeleton } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
-import { useDashboardSummary } from '../api/queries'
+import { useDashboardMetrics, useDashboardSummary } from '../api/queries'
+import type { DashboardMetrics, MatchingPoint } from '../api/types'
 import './DashboardPage.css'
 
 // API 없는 섹션 공통 래퍼: 목업 비주얼은 유지하되 회색+마스크로 "추후" 표시
@@ -16,8 +17,122 @@ function Soon({ children, label = '추후 제공' }: { children: React.ReactNode
   )
 }
 
+// 가입·참가신청 추세 (metrics) — 목업 SVG 스타일 유지, 의존성 없이 실데이터로 렌더
+function TrendChart({ signups, daily }: { signups: DashboardMetrics['signups']; daily: MatchingPoint[] }) {
+  const dates = signups.length ? signups.map((s) => s.date) : daily.map((d) => d.date)
+  const n = dates.length
+  if (n === 0) return <Empty description="기간 내 데이터 없음" />
+
+  const TOP = 20,
+    BOT = 180,
+    X0 = 10,
+    X1 = 610
+  const signupVals = signups.map((s) => s.count)
+  const appVals = daily.map((d) => d.applications)
+  const maxV = Math.max(1, ...signupVals, ...appVals)
+  const xAt = (i: number) => (n <= 1 ? (X0 + X1) / 2 : X0 + (i / (n - 1)) * (X1 - X0))
+  const yAt = (v: number) => BOT - (v / maxV) * (BOT - TOP)
+  const pts = (vals: number[]) => vals.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ')
+  const area = (vals: number[]) =>
+    vals.length
+      ? `M ${xAt(0).toFixed(1)},${BOT} L ${vals
+          .map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`)
+          .join(' L ')} L ${xAt(vals.length - 1).toFixed(1)},${BOT} Z`
+      : ''
+
+  // x축 라벨 최대 5개(마지막은 '오늘'이면 표기)
+  const labelIdx = n === 1 ? [0] : [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * (n - 1)))
+  const today = dayjs().format('YYYY-MM-DD')
+
+  return (
+    <>
+      <svg viewBox="0 0 620 200" width="100%" height={200} preserveAspectRatio="none">
+        <g stroke="#eff1f4" strokeWidth={1}>
+          <line x1="0" y1="40" x2="620" y2="40" />
+          <line x1="0" y1="90" x2="620" y2="90" />
+          <line x1="0" y1="140" x2="620" y2="140" />
+          <line x1="0" y1="180" x2="620" y2="180" />
+        </g>
+        {appVals.length > 0 && (
+          <>
+            <path d={area(appVals)} fill="rgba(124,92,255,.10)" />
+            <polyline points={pts(appVals)} fill="none" stroke="var(--violet)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        )}
+        {signupVals.length > 0 && (
+          <>
+            <path d={area(signupVals)} fill="rgba(22,119,255,.10)" />
+            <polyline points={pts(signupVals)} fill="none" stroke="var(--blue)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        )}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: 11, padding: '2px 4px 0' }}>
+        {[...new Set(labelIdx)].map((i) => (
+          <span key={i}>{dates[i] === today ? '오늘' : dayjs(dates[i]).format('M/D')}</span>
+        ))}
+      </div>
+    </>
+  )
+}
+
+// 매칭 성사율 도넛 (metrics.overall)
+function MatchDonut({ overall }: { overall: DashboardMetrics['matching']['overall'] }) {
+  const C = 2 * Math.PI * 52 // 원주 ≈ 326.7
+  const rate = overall.success_rate // 0~1 또는 null(분모 0)
+  const offset = rate == null ? C : C * (1 - rate)
+  const pct = rate == null ? '—' : `${Math.round(rate * 100)}%`
+  return (
+    <div className="donut-wrap">
+      <div className="donut-center">
+        <svg width={132} height={132} viewBox="0 0 132 132">
+          <circle cx="66" cy="66" r="52" fill="none" stroke="#eef0f3" strokeWidth={16} />
+          <circle
+            cx="66"
+            cy="66"
+            r="52"
+            fill="none"
+            stroke="var(--green)"
+            strokeWidth={16}
+            strokeDasharray={C.toFixed(1)}
+            strokeDashoffset={offset.toFixed(1)}
+            strokeLinecap="round"
+            transform="rotate(-90 66 66)"
+          />
+        </svg>
+        <div className="cval">
+          <b>{pct}</b>
+          <span>매칭 성사율</span>
+        </div>
+      </div>
+      <div className="dstat">
+        <div className="li">
+          <span className="k">
+            <span className="sw" style={{ background: 'var(--green)' }} />성사(matched)
+          </span>
+          <span className="v">{overall.matched}</span>
+        </div>
+        <div className="li">
+          <span className="k">
+            <span className="sw" style={{ background: '#eef0f3' }} />만료(expired)
+          </span>
+          <span className="v">{overall.expired}</span>
+        </div>
+        <div className="li">
+          <span className="k">신청(applications)</span>
+          <span className="v">{overall.applications}</span>
+        </div>
+        <div className="li">
+          <span className="k">성공률</span>
+          <span className="v">{rate == null ? '—' : `${(rate * 100).toFixed(1)}%`}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const { data, isLoading, isError } = useDashboardSummary()
+  const { data: metrics, isLoading: metricsLoading, isError: metricsError } = useDashboardMetrics()
   const navigate = useNavigate()
 
   // 일차별 막대 (active_rooms.by_day) — 마지막 일차는 "최종"
@@ -138,13 +253,11 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Row: 추세(추후) + 매칭 도넛(추후) */}
+                {/* Row: 가입·참가신청 추세 + 매칭 성사율 (metrics #244 실연동) */}
                 <div className="row">
                   <div className="panel">
                     <div className="ph">
-                      <h3 className="soon-head">
-                        가입 · 참가신청 추세 <span className="fpill">추후</span>
-                      </h3>
+                      <h3>가입 · 참가신청 추세</h3>
                       <div className="legend">
                         <span>
                           <i style={{ background: 'var(--blue)' }} />
@@ -157,113 +270,33 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="pb">
-                      <Soon label="추세 지표는 후속(/dashboard/metrics) 연동 예정">
-                        <svg viewBox="0 0 620 200" width="100%" height={200} preserveAspectRatio="none">
-                          <g stroke="#eff1f4" strokeWidth={1}>
-                            <line x1="0" y1="40" x2="620" y2="40" />
-                            <line x1="0" y1="90" x2="620" y2="90" />
-                            <line x1="0" y1="140" x2="620" y2="140" />
-                            <line x1="0" y1="180" x2="620" y2="180" />
-                          </g>
-                          <path
-                            d="M10,150 L60,140 L110,148 L160,120 L210,128 L260,105 L310,112 L360,90 L410,96 L460,72 L510,80 L560,60 L610,66 L610,180 L10,180 Z"
-                            fill="rgba(124,92,255,.10)"
-                          />
-                          <polyline
-                            points="10,150 60,140 110,148 160,120 210,128 260,105 310,112 360,90 410,96 460,72 510,80 560,60 610,66"
-                            fill="none"
-                            stroke="var(--violet)"
-                            strokeWidth={2.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M10,160 L60,152 L110,158 L160,138 L210,144 L260,126 L310,132 L360,116 L410,120 L460,102 L510,108 L560,92 L610,96 L610,180 L10,180 Z"
-                            fill="rgba(22,119,255,.10)"
-                          />
-                          <polyline
-                            points="10,160 60,152 110,158 160,138 210,144 260,126 310,132 360,116 410,120 460,102 510,108 560,92 610,96"
-                            fill="none"
-                            stroke="var(--blue)"
-                            strokeWidth={2.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            color: 'var(--text-3)',
-                            fontSize: 11,
-                            padding: '2px 4px 0',
-                          }}
-                        >
-                          <span>6/18</span>
-                          <span>6/22</span>
-                          <span>6/26</span>
-                          <span>6/30</span>
-                          <span>오늘</span>
-                        </div>
-                      </Soon>
+                      {metricsError ? (
+                        <Alert type="error" showIcon message="추이 데이터를 불러오지 못했습니다." />
+                      ) : metricsLoading || !metrics ? (
+                        <Skeleton.Node active style={{ width: '100%', height: 200 }}>
+                          <div />
+                        </Skeleton.Node>
+                      ) : (
+                        <TrendChart signups={metrics.signups} daily={metrics.matching.daily} />
+                      )}
                     </div>
                   </div>
 
                   <div className="panel">
                     <div className="ph">
-                      <h3 className="soon-head">
-                        매칭 현황 <span className="fpill">추후</span>
-                      </h3>
-                      <span className="hint">오늘 배정 기준</span>
+                      <h3>매칭 현황</h3>
+                      <span className="hint">
+                        {metrics ? `${metrics.range.from} ~ ${metrics.range.to}` : '최근 추이'}
+                      </span>
                     </div>
                     <div className="pb">
-                      <Soon label="매칭 성사율은 후속 연동 예정">
-                        <div className="donut-wrap">
-                          <div className="donut-center">
-                            <svg width={132} height={132} viewBox="0 0 132 132">
-                              <circle cx="66" cy="66" r="52" fill="none" stroke="#eef0f3" strokeWidth={16} />
-                              <circle
-                                cx="66"
-                                cy="66"
-                                r="52"
-                                fill="none"
-                                stroke="var(--green)"
-                                strokeWidth={16}
-                                strokeDasharray="326.7"
-                                strokeDashoffset="104.5"
-                                strokeLinecap="round"
-                                transform="rotate(-90 66 66)"
-                              />
-                            </svg>
-                            <div className="cval">
-                              <b>68%</b>
-                              <span>매칭 성사율</span>
-                            </div>
-                          </div>
-                          <div className="dstat">
-                            <div className="li">
-                              <span className="k">
-                                <span className="sw" style={{ background: 'var(--green)' }} />방 배정됨
-                              </span>
-                              <span className="v">23명</span>
-                            </div>
-                            <div className="li">
-                              <span className="k">
-                                <span className="sw" style={{ background: '#eef0f3' }} />대기 중
-                              </span>
-                              <span className="v">11명</span>
-                            </div>
-                            <div className="li">
-                              <span className="k">오늘 생성된 방</span>
-                              <span className="v">4개</span>
-                            </div>
-                            <div className="li">
-                              <span className="k">평균 대기시간</span>
-                              <span className="v">2.4h</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Soon>
+                      {metricsError ? (
+                        <Alert type="error" showIcon message="매칭 지표를 불러오지 못했습니다." />
+                      ) : metricsLoading || !metrics ? (
+                        <Skeleton active paragraph={{ rows: 4 }} />
+                      ) : (
+                        <MatchDonut overall={metrics.matching.overall} />
+                      )}
                     </div>
                   </div>
                 </div>

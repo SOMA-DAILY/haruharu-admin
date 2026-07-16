@@ -50,6 +50,23 @@ export interface DashboardSummary {
   today_signups: number
 }
 
+// 대시보드 추이(metrics) — 기간별 가입·매칭 시계열 (BE #244)
+export interface MatchingPoint {
+  date: string
+  applications: number
+  matched: number
+  expired: number
+  success_rate: number | null // matched/(matched+expired), 분모 0이면 null
+}
+export interface DashboardMetrics {
+  range: { from: string; to: string }
+  signups: { date: string; count: number }[]
+  matching: {
+    daily: MatchingPoint[]
+    overall: Omit<MatchingPoint, 'date'>
+  }
+}
+
 // ===== 세션(방) =====
 export interface RoomListItem {
   room_id: number
