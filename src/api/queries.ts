@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { dashboardApi, roomsApi, usersApi } from './endpoints'
-import type { MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
+import { dashboardApi, iapApi, roomsApi, usersApi } from './endpoints'
+import type { IapPurchaseQuery, MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
 
 export const useDashboardSummary = () =>
   useQuery({ queryKey: ['dashboard', 'summary'], queryFn: dashboardApi.summary })
@@ -19,3 +19,9 @@ export const useUsers = (q: UserListQuery) =>
 
 export const useUser = (userId: number) =>
   useQuery({ queryKey: ['user', userId], queryFn: () => usersApi.detail(userId), enabled: !!userId })
+
+export const useIapPurchases = (q: IapPurchaseQuery) =>
+  useQuery({ queryKey: ['iap', 'purchases', q], queryFn: () => iapApi.list(q) })
+
+export const useIapPurchase = (id: number) =>
+  useQuery({ queryKey: ['iap', 'purchase', id], queryFn: () => iapApi.detail(id), enabled: !!id })
