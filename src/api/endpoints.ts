@@ -1,6 +1,9 @@
-import { get, post } from './client'
+import { get, patch, post } from './client'
 import type {
+  AdminAccount,
   AdminMe,
+  CreateAdminAccountBody,
+  UpdateAdminAccountBody,
   DashboardMetrics,
   DashboardSummary,
   IapPurchaseDetail,
@@ -69,4 +72,11 @@ export interface IapPurchaseQuery {
 export const iapApi = {
   list: (q: IapPurchaseQuery) => get<Paged<IapPurchaseListItem>>('/iap/purchases', q),
   detail: (id: number) => get<IapPurchaseDetail>(`/iap/purchases/${id}`),
+}
+
+// ===== 어드민 계정 관리 (#234 · SUPER 전용) =====
+export const adminsApi = {
+  list: () => get<AdminAccount[]>('/admins'),
+  create: (body: CreateAdminAccountBody) => post<AdminAccount>('/admins', body),
+  update: (id: number, body: UpdateAdminAccountBody) => patch<AdminAccount>(`/admins/${id}`, body),
 }

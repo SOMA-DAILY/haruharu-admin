@@ -1,5 +1,12 @@
 import { Tag } from 'antd'
-import type { RoomStatus, UserStatus, IapPurchaseStatus, IapStore } from '../api/types'
+import type {
+  RoomStatus,
+  UserStatus,
+  IapPurchaseStatus,
+  IapStore,
+  Role,
+  AdminAccountStatus,
+} from '../api/types'
 
 const ROOM_MAP: Record<RoomStatus, { color: string; label: string }> = {
   PENDING: { color: 'gold', label: '대기' },
@@ -35,4 +42,13 @@ export function IapStatusTag({ status }: { status: IapPurchaseStatus }) {
 
 export function StoreTag({ store }: { store: IapStore }) {
   return store === 'APP_STORE' ? <Tag color="default">App Store</Tag> : <Tag color="green">Play Store</Tag>
+}
+
+const ROLE_MAP: Record<Role, string> = { SUPER: 'red', OPERATOR: 'blue', CS: 'default' }
+export function RoleTag({ role }: { role: Role }) {
+  return <Tag color={ROLE_MAP[role]}>{role}</Tag>
+}
+
+export function AdminStatusTag({ status }: { status: AdminAccountStatus }) {
+  return status === 'ACTIVE' ? <Tag color="green">활성</Tag> : <Tag color="default">비활성</Tag>
 }
