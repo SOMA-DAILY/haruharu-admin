@@ -1,5 +1,5 @@
 import { Tag } from 'antd'
-import type { RoomStatus, UserStatus, IapPurchaseStatus } from '../api/types'
+import type { RoomStatus, UserStatus, IapPurchaseStatus, IapStore } from '../api/types'
 
 const ROOM_MAP: Record<RoomStatus, { color: string; label: string }> = {
   PENDING: { color: 'gold', label: '대기' },
@@ -31,4 +31,8 @@ export function UserStatusTag({ status }: { status: UserStatus }) {
 export function IapStatusTag({ status }: { status: IapPurchaseStatus }) {
   const m = IAP_MAP[status]
   return <Tag color={m.color}>{m.label}</Tag>
+}
+
+export function StoreTag({ store }: { store: IapStore }) {
+  return store === 'APP_STORE' ? <Tag color="default">App Store</Tag> : <Tag color="green">Play Store</Tag>
 }

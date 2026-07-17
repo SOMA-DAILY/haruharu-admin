@@ -3,6 +3,9 @@ import type {
   AdminMe,
   DashboardMetrics,
   DashboardSummary,
+  IapPurchaseDetail,
+  IapPurchaseListItem,
+  IapPurchaseStatus,
   LoginRequest,
   Paged,
   RoomDetail,
@@ -53,4 +56,17 @@ export interface UserListQuery {
 export const usersApi = {
   list: (q: UserListQuery) => get<Paged<UserListItem>>('/users', q),
   detail: (userId: number) => get<UserDetail>(`/users/${userId}`),
+}
+
+// ===== 재화·결제 IAP (#237) =====
+export interface IapPurchaseQuery {
+  status?: IapPurchaseStatus
+  userId?: number
+  storeProductId?: string
+  page?: number
+  size?: number
+}
+export const iapApi = {
+  list: (q: IapPurchaseQuery) => get<Paged<IapPurchaseListItem>>('/iap/purchases', q),
+  detail: (id: number) => get<IapPurchaseDetail>(`/iap/purchases/${id}`),
 }

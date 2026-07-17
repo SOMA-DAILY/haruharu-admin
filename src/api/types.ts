@@ -122,6 +122,24 @@ export interface UserPayment {
   refunded_at: string | null
 }
 
+// ===== 어드민 IAP 결제 내역 (#237) =====
+export interface IapPurchaseListItem {
+  id: number
+  user_id: number
+  nickname: string | null
+  store_product_id: string
+  store: IapStore
+  coin_amount: number
+  status: IapPurchaseStatus
+  purchased_at: string
+  refunded_at: string | null
+}
+
+export interface IapPurchaseDetail extends IapPurchaseListItem {
+  product_id: number
+  store_transaction_id: string
+}
+
 export interface UserDetail {
   user_id: number
   status: UserStatus

@@ -7,6 +7,8 @@ import SessionsPage from './pages/SessionsPage'
 import RoomDetailPage from './pages/RoomDetailPage'
 import UsersPage from './pages/UsersPage'
 import UserDetailPage from './pages/UserDetailPage'
+import IapPage from './pages/IapPage'
+import PaymentDetailPage from './pages/PaymentDetailPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 
 export default function App() {
@@ -20,20 +22,8 @@ export default function App() {
           <Route path="/sessions/:id" element={<RoomDetailPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/:id" element={<UserDetailPage />} />
-          <Route
-            path="/iap"
-            element={
-              <PlaceholderPage
-                title="재화·결제(IAP)"
-                subtitle="인앱결제 내역·환불"
-                note="환불·코인 수동조정 API는 백엔드 이슈 6 후속입니다. 현재는 유저 상세의 결제 내역으로 확인하세요."
-              />
-            }
-          />
-          <Route
-            path="/iap/:id"
-            element={<PlaceholderPage title="결제 상세" note="결제 상세 전용 API는 백엔드 후속(이슈 6) 예정입니다." />}
-          />
+          <Route path="/iap" element={<IapPage />} />
+          <Route path="/iap/:id" element={<PaymentDetailPage />} />
           <Route
             path="/audit"
             element={
