@@ -43,6 +43,28 @@ export interface AdminMe {
   role: Role
 }
 
+// ===== 어드민 계정 관리 (#234 · SUPER 전용) =====
+export type AdminAccountStatus = 'ACTIVE' | 'INACTIVE'
+
+export interface AdminAccount {
+  id: number
+  email: string
+  name: string
+  role: Role
+  status: AdminAccountStatus
+  last_login_at: string | null
+}
+export interface CreateAdminAccountBody {
+  email: string
+  password: string
+  name: string
+  role: Role
+}
+export interface UpdateAdminAccountBody {
+  role?: Role
+  status?: AdminAccountStatus
+}
+
 // ===== 대시보드 =====
 export interface DashboardSummary {
   active_rooms: { total: number; by_day: Record<string, number> }

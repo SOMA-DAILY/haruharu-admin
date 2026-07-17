@@ -9,6 +9,7 @@ import UsersPage from './pages/UsersPage'
 import UserDetailPage from './pages/UserDetailPage'
 import IapPage from './pages/IapPage'
 import PaymentDetailPage from './pages/PaymentDetailPage'
+import AuditPage from './pages/AuditPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 
 export default function App() {
@@ -24,16 +25,7 @@ export default function App() {
           <Route path="/users/:id" element={<UserDetailPage />} />
           <Route path="/iap" element={<IapPage />} />
           <Route path="/iap/:id" element={<PaymentDetailPage />} />
-          <Route
-            path="/audit"
-            element={
-              <PlaceholderPage
-                title="관리자·감사로그"
-                subtitle="관리자 계정 및 활동 로그"
-                note="감사로그 조회 API는 백엔드 후속입니다."
-              />
-            }
-          />
+          <Route path="/audit" element={<AuditPage />} />
           <Route
             path="/moderation"
             element={

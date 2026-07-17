@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { dashboardApi, iapApi, roomsApi, usersApi } from './endpoints'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { adminsApi, dashboardApi, iapApi, roomsApi, usersApi } from './endpoints'
 import type { IapPurchaseQuery, MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
+import type { CreateAdminAccountBody, UpdateAdminAccountBody } from './types'
 
 export const useDashboardSummary = () =>
   useQuery({ queryKey: ['dashboard', 'summary'], queryFn: dashboardApi.summary })
@@ -25,3 +26,23 @@ export const useIapPurchases = (q: IapPurchaseQuery) =>
 
 export const useIapPurchase = (id: number) =>
   useQuery({ queryKey: ['iap', 'purchase', id], queryFn: () => iapApi.detail(id), enabled: !!id })
+
+// ===== 어드민 계정 (#234) =====
+export const useAdminAccounts = (enabled = true) =>
+  useQuery({ queryKey: ['admins'], queryFn: adminsApi.list, enabled })
+
+export const useCreateAdminAccount = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateAdminAccountBody) => adminsApi.create(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admins'] }),
+  })
+}
+
+export const useUpdateAdminAccount = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: UpdateAdminAccountBody }) => adminsApi.update(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admins'] }),
+  })
+}
