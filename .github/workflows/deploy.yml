@@ -1,13 +1,20 @@
-name: Deploy (dev)
+name: Deploy
 
-# develop 머지(=push) 시 자동 배포. 필요 시 수동 실행도 가능.
+# dev: develop 머지(push) 시 자동 배포.
+# prod: Actions에서 수동 실행(Run workflow) — environment=prod 선택.
 on:
   push:
     branches: [develop]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 배포 환경
+        type: choice
+        options: [prod, dev]
+        default: prod
 
 concurrency:
-  group: deploy-dev
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
   cancel-in-progress: true
 
 permissions:
@@ -17,7 +24,8 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: dev
+    # push=dev, 수동실행=선택 환경. 환경별 변수(버킷·배포ID·API주소)가 여기서 결정됨.
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,8 +40,8 @@ jobs:
 
       - name: Build
         env:
-          # 배포 빌드는 어드민 API 절대주소로 호출(브라우저 크로스오리진, CORS 허용 필요).
-          VITE_API_BASE_URL: https://dev-api.haruharu.co.kr
+          # 환경별 어드민 API 절대주소 (dev: dev-api / prod: api)
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
         run: npm run build
 
       - name: Configure AWS credentials (OIDC)
