@@ -8,6 +8,7 @@ import {
   WarningOutlined,
   SettingOutlined,
   SafetyOutlined,
+  FlagOutlined,
 } from '@ant-design/icons'
 
 export type NavItem = {
@@ -26,6 +27,7 @@ export const navItems: NavItem[] = [
   { key: '/sessions', label: '세션(방) 관리', icon: <HomeOutlined />, group: '운영' },
   { key: '/users', label: '유저 관리', icon: <UserOutlined />, group: '운영' },
   { key: '/iap', label: '재화·결제(IAP)', icon: <CreditCardOutlined />, group: '운영' },
+  { key: '/missions', label: '미션 관리', icon: <FlagOutlined />, group: '운영' },
   {
     key: '/moderation',
     label: '미션 영상 검수',

@@ -2,9 +2,12 @@ import { get, patch, post } from './client'
 import type {
   AdminAccount,
   AdminMe,
+  AdminMission,
   AssignGenderBody,
   CreateAdminAccountBody,
+  CreateMissionBody,
   CreateRoomBody,
+  UpdateMissionBody,
   UpdateAdminAccountBody,
   DashboardMetrics,
   DashboardSummary,
@@ -93,4 +96,11 @@ export const adminsApi = {
   list: () => get<AdminAccount[]>('/admins'),
   create: (body: CreateAdminAccountBody) => post<AdminAccount>('/admins', body),
   update: (id: number, body: UpdateAdminAccountBody) => patch<AdminAccount>(`/admins/${id}`, body),
+}
+
+// ===== 미션 카탈로그 (SUPER 전용) =====
+export const missionsApi = {
+  list: () => get<AdminMission[]>('/missions'),
+  create: (body: CreateMissionBody) => post<AdminMission>('/missions', body),
+  update: (id: number, body: UpdateMissionBody) => patch<AdminMission>(`/missions/${id}`, body),
 }
