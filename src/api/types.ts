@@ -84,6 +84,15 @@ export interface UpdateMissionBody {
   active?: boolean
 }
 
+// ===== 데모 접근 코드 (SUPER 전용) =====
+export interface DemoAccessCode {
+  code: string | null
+  configured: boolean
+}
+export interface SetDemoCodeBody {
+  code: string
+}
+
 // ===== 대시보드 =====
 export interface DashboardSummary {
   active_rooms: { total: number; by_day: Record<string, number> }

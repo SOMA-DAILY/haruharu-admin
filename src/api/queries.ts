@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { adminsApi, dashboardApi, iapApi, missionsApi, roomsApi, usersApi } from './endpoints'
+import { adminsApi, dashboardApi, demoApi, iapApi, missionsApi, roomsApi, usersApi } from './endpoints'
 import type { IapPurchaseQuery, MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
 import type {
   AssignGenderBody,
@@ -7,6 +7,7 @@ import type {
   CreateMissionBody,
   CreateRoomBody,
   ReissueInviteBody,
+  SetDemoCodeBody,
   UpdateAdminAccountBody,
   UpdateMissionBody,
 } from './types'
@@ -113,5 +114,17 @@ export const useUpdateMission = () => {
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: UpdateMissionBody }) => missionsApi.update(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['missions'] }),
+  })
+}
+
+// ===== 데모 접근 코드 =====
+export const useDemoCode = (enabled = true) =>
+  useQuery({ queryKey: ['demo', 'access-code'], queryFn: demoApi.getCode, enabled })
+
+export const useSetDemoCode = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: SetDemoCodeBody) => demoApi.setCode(body),
+    onSuccess: (data) => qc.setQueryData(['demo', 'access-code'], data),
   })
 }
