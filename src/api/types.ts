@@ -22,7 +22,9 @@ export interface Paged<T> {
 
 // ===== Enum =====
 export type Role = 'SUPER' | 'OPERATOR' | 'CS'
-export type RoomStatus = 'PENDING' | 'ACTIVE' | 'ENDED'
+export type RoomStatus = 'PENDING' | 'ACTIVE' | 'SELECTING' | 'ENDED' | 'CANCELLED'
+export type RoomInviteStatus = 'ACTIVE' | 'DISABLED' | 'EXPIRED'
+export type Gender = 'MALE' | 'FEMALE'
 export type UserStatus = 'ONBOARDING' | 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED'
 export type IapStore = 'APP_STORE' | 'PLAY_STORE'
 export type IapPurchaseStatus = 'OWNED' | 'REFUNDED'
@@ -104,7 +106,7 @@ export interface RoomListItem {
 export interface RoomMember {
   member_id: number
   user_id: number
-  gender: 'FEMALE' | 'MALE'
+  gender: Gender | null // 초대코드 입장은 미수집 → 운영진이 부여
   joined_at: string
   nickname: string | null
   age: number | null
@@ -123,6 +125,43 @@ export interface RoomDetail {
   female_count: number
   male_count: number
   members: RoomMember[]
+}
+
+// 방 생성·초대코드 (초대코드 MVP)
+export interface CreateRoomBody {
+  starts_at: string
+  final_selection_opens_at: string
+  final_selection_closes_at: string
+  result_at: string
+  ends_at: string
+  total_days: number
+  max_uses?: number | null
+  invite_expires_at?: string | null
+}
+export interface RoomCreated {
+  room_id: number
+  code: string
+}
+export interface RoomInvite {
+  invite_id: number
+  code: string
+  status: RoomInviteStatus
+  max_uses: number | null
+  used_count: number
+  expires_at: string | null
+  created_by: string
+}
+export interface ReissueInviteBody {
+  max_uses?: number | null
+  expires_at?: string | null
+}
+export interface AssignGenderBody {
+  gender: Gender
+}
+export interface RoomMemberAssigned {
+  member_id: number
+  user_id: number
+  gender: Gender
 }
 
 // ===== 유저 =====
