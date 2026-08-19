@@ -1,6 +1,7 @@
 import { Tag } from 'antd'
 import type {
   RoomStatus,
+  RoomInviteStatus,
   UserStatus,
   IapPurchaseStatus,
   IapStore,
@@ -11,7 +12,15 @@ import type {
 const ROOM_MAP: Record<RoomStatus, { color: string; label: string }> = {
   PENDING: { color: 'gold', label: '대기' },
   ACTIVE: { color: 'green', label: '진행중' },
+  SELECTING: { color: 'blue', label: '선택중' },
   ENDED: { color: 'default', label: '종료' },
+  CANCELLED: { color: 'red', label: '취소' },
+}
+
+const INVITE_MAP: Record<RoomInviteStatus, { color: string; label: string }> = {
+  ACTIVE: { color: 'green', label: '유효' },
+  DISABLED: { color: 'default', label: '비활성' },
+  EXPIRED: { color: 'red', label: '만료' },
 }
 
 const USER_MAP: Record<UserStatus, { color: string; label: string }> = {
@@ -33,6 +42,10 @@ export function RoomStatusTag({ status }: { status: RoomStatus }) {
 }
 export function UserStatusTag({ status }: { status: UserStatus }) {
   const m = USER_MAP[status]
+  return <Tag color={m.color}>{m.label}</Tag>
+}
+export function RoomInviteStatusTag({ status }: { status: RoomInviteStatus }) {
+  const m = INVITE_MAP[status]
   return <Tag color={m.color}>{m.label}</Tag>
 }
 export function IapStatusTag({ status }: { status: IapPurchaseStatus }) {

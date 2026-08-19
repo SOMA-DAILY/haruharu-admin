@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminsApi, dashboardApi, iapApi, roomsApi, usersApi } from './endpoints'
 import type { IapPurchaseQuery, MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
-import type { CreateAdminAccountBody, UpdateAdminAccountBody } from './types'
+import type {
+  AssignGenderBody,
+  CreateAdminAccountBody,
+  CreateRoomBody,
+  ReissueInviteBody,
+  UpdateAdminAccountBody,
+} from './types'
 
 export const useDashboardSummary = () =>
   useQuery({ queryKey: ['dashboard', 'summary'], queryFn: dashboardApi.summary })
@@ -14,6 +20,48 @@ export const useRooms = (q: RoomListQuery) =>
 
 export const useRoom = (roomId: number) =>
   useQuery({ queryKey: ['room', roomId], queryFn: () => roomsApi.detail(roomId), enabled: !!roomId })
+
+// 초대코드 목록 (SUPER·OPERATOR) — enabled로 CS/권한없음 시 미호출
+export const useRoomInvites = (roomId: number, enabled = true) =>
+  useQuery({
+    queryKey: ['room', roomId, 'invites'],
+    queryFn: () => roomsApi.invites(roomId),
+    enabled: !!roomId && enabled,
+  })
+
+// 방 쓰기 mutation
+export const useCreateRoom = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateRoomBody) => roomsApi.create(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rooms'] }),
+  })
+}
+export const useReissueInvite = (roomId: number) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ReissueInviteBody) => roomsApi.reissueInvite(roomId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['room', roomId, 'invites'] }),
+  })
+}
+export const useCancelRoom = (roomId: number) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => roomsApi.cancel(roomId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['room', roomId] })
+      qc.invalidateQueries({ queryKey: ['rooms'] })
+    },
+  })
+}
+export const useAssignGender = (roomId: number) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ memberId, body }: { memberId: number; body: AssignGenderBody }) =>
+      roomsApi.assignGender(roomId, memberId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['room', roomId] }),
+  })
+}
 
 export const useUsers = (q: UserListQuery) =>
   useQuery({ queryKey: ['users', q], queryFn: () => usersApi.list(q) })

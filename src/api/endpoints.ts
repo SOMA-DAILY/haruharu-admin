@@ -2,7 +2,9 @@ import { get, patch, post } from './client'
 import type {
   AdminAccount,
   AdminMe,
+  AssignGenderBody,
   CreateAdminAccountBody,
+  CreateRoomBody,
   UpdateAdminAccountBody,
   DashboardMetrics,
   DashboardSummary,
@@ -11,8 +13,12 @@ import type {
   IapPurchaseStatus,
   LoginRequest,
   Paged,
+  ReissueInviteBody,
+  RoomCreated,
   RoomDetail,
+  RoomInvite,
   RoomListItem,
+  RoomMemberAssigned,
   RoomStatus,
   TokenPair,
   UserDetail,
@@ -47,6 +53,14 @@ export interface RoomListQuery {
 export const roomsApi = {
   list: (q: RoomListQuery) => get<Paged<RoomListItem>>('/rooms', q),
   detail: (roomId: number) => get<RoomDetail>(`/rooms/${roomId}`),
+  // 쓰기 (SUPER·OPERATOR)
+  create: (body: CreateRoomBody) => post<RoomCreated>('/rooms', body),
+  invites: (roomId: number) => get<RoomInvite[]>(`/rooms/${roomId}/invites`),
+  reissueInvite: (roomId: number, body: ReissueInviteBody) =>
+    post<RoomInvite>(`/rooms/${roomId}/invites`, body),
+  cancel: (roomId: number) => post<null>(`/rooms/${roomId}/cancel`),
+  assignGender: (roomId: number, memberId: number, body: AssignGenderBody) =>
+    patch<RoomMemberAssigned>(`/rooms/${roomId}/members/${memberId}`, body),
 }
 
 // ===== 유저 (#193) =====
