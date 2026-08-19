@@ -67,6 +67,23 @@ export interface UpdateAdminAccountBody {
   status?: AdminAccountStatus
 }
 
+// ===== 미션 카탈로그 (SUPER 전용) =====
+export interface AdminMission {
+  id: number
+  description: string
+  points: number
+  active: boolean
+}
+export interface CreateMissionBody {
+  description: string
+  points: number
+}
+export interface UpdateMissionBody {
+  description?: string
+  points?: number
+  active?: boolean
+}
+
 // ===== 대시보드 =====
 export interface DashboardSummary {
   active_rooms: { total: number; by_day: Record<string, number> }

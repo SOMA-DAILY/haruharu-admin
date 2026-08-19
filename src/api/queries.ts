@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { adminsApi, dashboardApi, iapApi, roomsApi, usersApi } from './endpoints'
+import { adminsApi, dashboardApi, iapApi, missionsApi, roomsApi, usersApi } from './endpoints'
 import type { IapPurchaseQuery, MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
 import type {
   AssignGenderBody,
   CreateAdminAccountBody,
+  CreateMissionBody,
   CreateRoomBody,
   ReissueInviteBody,
   UpdateAdminAccountBody,
+  UpdateMissionBody,
 } from './types'
 
 export const useDashboardSummary = () =>
@@ -92,5 +94,24 @@ export const useUpdateAdminAccount = () => {
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: UpdateAdminAccountBody }) => adminsApi.update(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admins'] }),
+  })
+}
+
+// ===== 미션 카탈로그 =====
+export const useMissions = (enabled = true) =>
+  useQuery({ queryKey: ['missions'], queryFn: missionsApi.list, enabled })
+
+export const useCreateMission = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateMissionBody) => missionsApi.create(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['missions'] }),
+  })
+}
+export const useUpdateMission = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: UpdateMissionBody }) => missionsApi.update(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['missions'] }),
   })
 }
