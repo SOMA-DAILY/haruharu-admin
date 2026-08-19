@@ -1,4 +1,4 @@
-import { get, patch, post } from './client'
+import { get, patch, post, put } from './client'
 import type {
   AdminAccount,
   AdminMe,
@@ -7,6 +7,8 @@ import type {
   CreateAdminAccountBody,
   CreateMissionBody,
   CreateRoomBody,
+  DemoAccessCode,
+  SetDemoCodeBody,
   UpdateMissionBody,
   UpdateAdminAccountBody,
   DashboardMetrics,
@@ -103,4 +105,10 @@ export const missionsApi = {
   list: () => get<AdminMission[]>('/missions'),
   create: (body: CreateMissionBody) => post<AdminMission>('/missions', body),
   update: (id: number, body: UpdateMissionBody) => patch<AdminMission>(`/missions/${id}`, body),
+}
+
+// ===== 데모 접근 코드 (SUPER 전용) =====
+export const demoApi = {
+  getCode: () => get<DemoAccessCode>('/demo/access-code'),
+  setCode: (body: SetDemoCodeBody) => put<DemoAccessCode>('/demo/access-code', body),
 }

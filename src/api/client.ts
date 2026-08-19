@@ -85,3 +85,7 @@ export async function patch<T>(url: string, body?: unknown): Promise<T> {
   const res = await http.patch<T>(url, body)
   return res.data
 }
+export async function put<T>(url: string, body?: unknown): Promise<T> {
+  const res = await http.put<T>(url, body)
+  return res.data
+}
