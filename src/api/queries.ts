@@ -1,15 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminsApi, dashboardApi, demoApi, iapApi, missionsApi, roomsApi, usersApi } from './endpoints'
-import type { IapPurchaseQuery, MetricsQuery, RoomListQuery, UserListQuery } from './endpoints'
+import type {
+  IapPurchaseQuery,
+  MetricsQuery,
+  MissionListQuery,
+  RoomListQuery,
+  UserListQuery,
+} from './endpoints'
 import type {
   AssignGenderBody,
   CreateAdminAccountBody,
-  CreateMissionBody,
   CreateRoomBody,
+  MissionRevisionBody,
   ReissueInviteBody,
   SetDemoCodeBody,
   UpdateAdminAccountBody,
-  UpdateMissionBody,
 } from './types'
 
 export const useDashboardSummary = () =>
@@ -98,21 +103,38 @@ export const useUpdateAdminAccount = () => {
   })
 }
 
-// ===== 미션 카탈로그 =====
-export const useMissions = (enabled = true) =>
-  useQuery({ queryKey: ['missions'], queryFn: missionsApi.list, enabled })
+// ===== 미션 카탈로그 (revision 모델) =====
+export const useMissions = (q: MissionListQuery, enabled = true) =>
+  useQuery({ queryKey: ['missions', q], queryFn: () => missionsApi.list(q), enabled })
+
+export const useMissionRevisions = (id: number, q: MissionListQuery, enabled = true) =>
+  useQuery({
+    queryKey: ['mission', id, 'revisions', q],
+    queryFn: () => missionsApi.revisions(id, q),
+    enabled: !!id && enabled,
+  })
 
 export const useCreateMission = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: CreateMissionBody) => missionsApi.create(body),
+    mutationFn: (body: MissionRevisionBody) => missionsApi.create(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['missions'] }),
   })
 }
-export const useUpdateMission = () => {
+export const usePublishRevision = (id: number) => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: UpdateMissionBody }) => missionsApi.update(id, body),
+    mutationFn: (body: MissionRevisionBody) => missionsApi.publishRevision(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['missions'] })
+      qc.invalidateQueries({ queryKey: ['mission', id, 'revisions'] })
+    },
+  })
+}
+export const useChangeMissionStatus = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, active }: { id: number; active: boolean }) => missionsApi.changeStatus(id, active),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['missions'] }),
   })
 }

@@ -1,70 +1,163 @@
 import { useState } from 'react'
-import { Card, Table, Button, Modal, Form, Input, InputNumber, Switch, Tag, Alert, App } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Modal, Tag, Switch, Space, Typography, Alert, App } from 'antd'
+import { PlusOutlined, VideoCameraOutlined, MessageOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
 import { useAuth } from '../auth/AuthContext'
-import { useMissions, useCreateMission, useUpdateMission } from '../api/queries'
+import {
+  useMissions,
+  useMissionRevisions,
+  useCreateMission,
+  usePublishRevision,
+  useChangeMissionStatus,
+} from '../api/queries'
+import MissionFormModal from '../components/MissionFormModal'
 import { ApiError } from '../api/client'
-import type { AdminMission } from '../api/types'
+import { GOAL_LABEL, ATTR_COLOR, PERIOD_LABEL } from '../config/missionEnums'
+import type { AdminMission, MissionRevisionBody } from '../api/types'
+
+function RevisionHistoryModal({ mission, onClose }: { mission: AdminMission | null; onClose: () => void }) {
+  const { data, isLoading } = useMissionRevisions(mission?.id ?? 0, { page: 0, size: 50 }, !!mission)
+  return (
+    <Modal title={`revision 이력 — 미션 #${mission?.id ?? ''}`} open={!!mission} onCancel={onClose} footer={null} width={620}>
+      <Table
+        rowKey="id"
+        loading={isLoading}
+        dataSource={data?.content}
+        pagination={false}
+        size="small"
+        columns={[
+          { title: 'rev', dataIndex: 'revision_number', width: 60, render: (v) => `v${v}` },
+          { title: '문구', dataIndex: 'description' },
+          {
+            title: '생성',
+            dataIndex: 'created_at',
+            width: 150,
+            render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
+          },
+        ]}
+      />
+    </Modal>
+  )
+}
 
 function MissionsPanel() {
   const { message } = App.useApp()
-  const { data, isLoading, isError } = useMissions()
-  const createMut = useCreateMission()
-  const updateMut = useUpdateMission()
+  const [page, setPage] = useState(0)
+  const [size, setSize] = useState(20)
+  const { data, isLoading, isError } = useMissions({ page, size })
 
+  const [editing, setEditing] = useState<AdminMission | null>(null) // publish 대상
   const [createOpen, setCreateOpen] = useState(false)
-  const [editing, setEditing] = useState<AdminMission | null>(null)
-  const [createForm] = Form.useForm()
-  const [editForm] = Form.useForm()
+  const [historyMission, setHistoryMission] = useState<AdminMission | null>(null)
 
-  const onCreate = async (v: { description: string; points: number }) => {
+  const createMut = useCreateMission()
+  const publishMut = usePublishRevision(editing?.id ?? 0)
+  const statusMut = useChangeMissionStatus()
+
+  const onCreate = async (body: MissionRevisionBody) => {
     try {
-      await createMut.mutateAsync(v)
+      await createMut.mutateAsync(body)
       message.success('미션을 생성했습니다.')
       setCreateOpen(false)
-      createForm.resetFields()
     } catch (e) {
       message.error(e instanceof ApiError ? e.message : '생성에 실패했습니다.')
+      throw e
     }
   }
-
-  const onEdit = async (v: { description: string; points: number; active: boolean }) => {
-    if (!editing) return
+  const onPublish = async (body: MissionRevisionBody) => {
     try {
-      await updateMut.mutateAsync({ id: editing.id, body: v })
-      message.success('수정했습니다.')
+      await publishMut.mutateAsync(body)
+      message.success('새 버전을 발행했습니다.')
       setEditing(null)
     } catch (e) {
-      message.error(e instanceof ApiError ? e.message : '수정에 실패했습니다.')
+      message.error(e instanceof ApiError ? e.message : '발행에 실패했습니다.')
+      throw e
+    }
+  }
+  const onToggleStatus = async (m: AdminMission, active: boolean) => {
+    try {
+      await statusMut.mutateAsync({ id: m.id, active })
+      message.success(active ? '활성화했습니다.' : '비활성화했습니다.')
+    } catch (e) {
+      message.error(e instanceof ApiError ? e.message : '상태 변경에 실패했습니다.')
     }
   }
 
   const columns: ColumnsType<AdminMission> = [
-    { title: 'ID', dataIndex: 'id', width: 70 },
-    { title: '미션 문구', dataIndex: 'description' },
-    { title: '포인트', dataIndex: 'points', width: 90 },
     {
-      title: '활성',
-      dataIndex: 'active',
-      width: 100,
-      render: (a: boolean) => (a ? <Tag color="green">활성</Tag> : <Tag color="default">비활성</Tag>),
+      title: '문구',
+      key: 'description',
+      render: (_, m) => (
+        <Typography.Text ellipsis style={{ maxWidth: 260 }}>
+          {m.active_revision.description}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: '목표',
+      key: 'goal',
+      width: 90,
+      render: (_, m) => <Tag>{GOAL_LABEL[m.active_revision.mission_goal]}</Tag>,
+    },
+    {
+      title: '깊이',
+      key: 'depth',
+      width: 90,
+      render: (_, m) => (
+        <Tag color={ATTR_COLOR[m.active_revision.disclosure_depth]}>{m.active_revision.disclosure_depth}</Tag>
+      ),
+    },
+    {
+      title: '채널',
+      key: 'channel',
+      width: 70,
+      render: (_, m) =>
+        m.active_revision.activation_channel === 'VIDEO' ? <VideoCameraOutlined /> : <MessageOutlined />,
+    },
+    {
+      title: '사용 시점',
+      key: 'eligibilities',
+      render: (_, m) => (
+        <Space size={[4, 4]} wrap>
+          {m.active_revision.eligibilities.map((e) => (
+            <Tag key={`${e.day_number}-${e.period}`} style={{ margin: 0 }}>
+              Day{e.day_number} {PERIOD_LABEL[e.period]}
+            </Tag>
+          ))}
+        </Space>
+      ),
+    },
+    { title: '군집', key: 'cluster', width: 110, render: (_, m) => m.active_revision.semantic_cluster },
+    {
+      title: 'fallback',
+      key: 'fallback',
+      width: 80,
+      render: (_, m) => (m.active_revision.is_fallback ? <Tag color="gold">fallback</Tag> : null),
+    },
+    { title: 'rev', key: 'rev', width: 60, render: (_, m) => `v${m.active_revision.revision_number}` },
+    {
+      title: '상태',
+      key: 'status',
+      width: 80,
+      render: (_, m) => (
+        <Switch checked={m.active} loading={statusMut.isPending} onChange={(v) => onToggleStatus(m, v)} />
+      ),
     },
     {
       title: '',
       key: 'action',
-      width: 90,
-      render: (_, r) => (
-        <Button
-          size="small"
-          onClick={() => {
-            setEditing(r)
-            editForm.setFieldsValue({ description: r.description, points: r.points, active: r.active })
-          }}
-        >
-          수정
-        </Button>
+      width: 170,
+      render: (_, m) => (
+        <Space>
+          <Button size="small" onClick={() => setEditing(m)}>
+            새 버전 발행
+          </Button>
+          <Button size="small" type="text" onClick={() => setHistoryMission(m)}>
+            이력
+          </Button>
+        </Space>
       ),
     },
   ]
@@ -78,52 +171,43 @@ function MissionsPanel() {
           미션 생성
         </Button>
       </div>
-      <Table<AdminMission> rowKey="id" loading={isLoading} columns={columns} dataSource={data} pagination={false} />
+      <Table<AdminMission>
+        rowKey="id"
+        loading={isLoading}
+        columns={columns}
+        dataSource={data?.content}
+        pagination={{
+          current: (data?.page.page ?? 0) + 1,
+          pageSize: size,
+          total: data?.page.total_elements ?? 0,
+          showSizeChanger: true,
+          onChange: (p, ps) => {
+            setPage(p - 1)
+            setSize(ps)
+          },
+        }}
+      />
 
-      <Modal
-        title="미션 생성"
+      {/* 생성 */}
+      <MissionFormModal
         open={createOpen}
-        onCancel={() => setCreateOpen(false)}
-        onOk={() => createForm.submit()}
-        okText="생성"
-        confirmLoading={createMut.isPending}
-        destroyOnClose
-      >
-        <Form form={createForm} layout="vertical" onFinish={onCreate} requiredMark={false} initialValues={{ points: 0 }}>
-          <Form.Item
-            name="description"
-            label="미션 문구"
-            rules={[{ required: true, max: 500, message: '문구를 입력하세요(최대 500자).' }]}
-          >
-            <Input.TextArea rows={3} placeholder="오늘 먹은 가장 맛있는 음식을 보여주세요" showCount maxLength={500} />
-          </Form.Item>
-          <Form.Item name="points" label="완주 포인트(열쇠, 현재 미사용)" rules={[{ required: true }]}>
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={`미션 수정 #${editing?.id ?? ''}`}
+        onClose={() => setCreateOpen(false)}
+        title="미션 생성"
+        submitText="생성"
+        pending={createMut.isPending}
+        onSubmit={onCreate}
+      />
+      {/* 새 버전 발행 (현재 revision 프리필) */}
+      <MissionFormModal
         open={!!editing}
-        onCancel={() => setEditing(null)}
-        onOk={() => editForm.submit()}
-        okText="저장"
-        confirmLoading={updateMut.isPending}
-        destroyOnClose
-      >
-        <Form form={editForm} layout="vertical" onFinish={onEdit} requiredMark={false}>
-          <Form.Item name="description" label="미션 문구" rules={[{ min: 1, max: 500 }]}>
-            <Input.TextArea rows={3} showCount maxLength={500} />
-          </Form.Item>
-          <Form.Item name="points" label="완주 포인트">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="active" label="활성 (끄면 소프트 삭제 = 배정 후보 제외)" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onClose={() => setEditing(null)}
+        title={`새 버전 발행 — 미션 #${editing?.id ?? ''}`}
+        submitText="새 버전 발행"
+        initial={editing?.active_revision}
+        pending={publishMut.isPending}
+        onSubmit={onPublish}
+      />
+      <RevisionHistoryModal mission={historyMission} onClose={() => setHistoryMission(null)} />
     </>
   )
 }
@@ -134,7 +218,7 @@ export default function MissionsPage() {
 
   return (
     <>
-      <PageHeader title="미션 관리" subtitle="미션 문구 카탈로그 (활성 미션이 방 배정 후보)" />
+      <PageHeader title="미션 관리" subtitle="미션 문구 카탈로그 (활성 미션이 방 배정 후보) · 수정=새 버전 발행" />
       <Card>
         {isSuper ? (
           <MissionsPanel />

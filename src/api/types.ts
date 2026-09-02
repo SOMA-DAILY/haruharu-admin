@@ -67,21 +67,60 @@ export interface UpdateAdminAccountBody {
   status?: AdminAccountStatus
 }
 
-// ===== 미션 카탈로그 (SUPER 전용) =====
+// ===== 미션 카탈로그 (SUPER 전용 · revision 모델, BE #364) =====
+export type MissionAttributeLevel = 'LOW' | 'MEDIUM' | 'HIGH'
+export type MissionGoal = 'OBSERVATION' | 'PREFERENCE' | 'MEANING' | 'VALUE' | 'PERSONAL' | 'RELATIONAL'
+export type ActivationChannel = 'VIDEO' | 'GROUP_CHAT'
+export type InteractionScope = 'SELF' | 'GROUP' | 'SPECIFIC_MEMBER'
+export type PreferenceLeakRisk = 'NONE' | 'LOW' | 'HIGH'
+export type MissionPeriod = 'MORNING' | 'AFTERNOON'
+
+export interface MissionEligibility {
+  day_number: number // 1~3
+  period: MissionPeriod
+}
+
+export interface AdminMissionRevision {
+  id: number
+  revision_number: number
+  description: string
+  disclosure_depth: MissionAttributeLevel
+  mission_goal: MissionGoal
+  activation_channel: ActivationChannel
+  interaction_scope: InteractionScope
+  participation_burden: MissionAttributeLevel
+  privacy_risk: MissionAttributeLevel
+  preference_leak_risk: PreferenceLeakRisk
+  capture_difficulty: MissionAttributeLevel
+  semantic_cluster: string
+  base_quality_score: number
+  is_fallback: boolean
+  eligibilities: MissionEligibility[]
+  created_at: string
+}
+
 export interface AdminMission {
   id: number
-  description: string
-  points: number
+  active_revision_id: number
   active: boolean
+  active_revision: AdminMissionRevision
 }
-export interface CreateMissionBody {
+
+// 생성 · revision 발행 공통 바디 (13필드)
+export interface MissionRevisionBody {
   description: string
-  points: number
-}
-export interface UpdateMissionBody {
-  description?: string
-  points?: number
-  active?: boolean
+  disclosure_depth: MissionAttributeLevel
+  mission_goal: MissionGoal
+  activation_channel: ActivationChannel
+  interaction_scope: InteractionScope
+  participation_burden: MissionAttributeLevel
+  privacy_risk: MissionAttributeLevel
+  preference_leak_risk: PreferenceLeakRisk
+  capture_difficulty: MissionAttributeLevel
+  semantic_cluster: string
+  base_quality_score: number
+  is_fallback: boolean
+  eligibilities: MissionEligibility[]
 }
 
 // ===== 데모 접근 코드 (SUPER 전용) =====
