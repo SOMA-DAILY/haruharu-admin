@@ -193,6 +193,13 @@ export interface RoomDetail {
 }
 
 // 방 생성·초대코드 (초대코드 MVP)
+// 방별 미션 슬롯 (BE #361) — total_days × 2(오전/오후)개 필수
+export interface RoomMissionSlot {
+  day_number: number
+  period: MissionPeriod
+  opens_at: string
+  closes_at: string
+}
 export interface CreateRoomBody {
   starts_at: string
   final_selection_opens_at: string
@@ -202,6 +209,7 @@ export interface CreateRoomBody {
   total_days: number
   max_uses?: number | null
   invite_expires_at?: string | null
+  mission_slots: RoomMissionSlot[]
 }
 export interface RoomCreated {
   room_id: number
