@@ -52,7 +52,8 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
     onClose()
   }
 
-  // 시작시각 기준으로 슬롯 노출 시각 자동 채우기 (오전 09~12, 오후 18~21)
+  // 시작시각 기준 오프셋으로 슬롯 자동 채우기 (BE RoomMissionSlotSchedule.defaults 규칙과 일치).
+  // 오전 시작+3h~+8h, 오후 +9h~+14h, day마다 +24h → opens≥시작·겹침 없음 보장.
   const autofill = () => {
     const start = form.getFieldValue('starts_at') as Dayjs | undefined
     if (!start) {
@@ -61,14 +62,14 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
     }
     const slots: Record<string, SlotVal> = {}
     days.forEach((d) => {
-      const base = start.add(d - 1, 'day')
+      const dayOffset = (d - 1) * 24
       slots[slotKey(d, 'MORNING')] = {
-        opens: base.hour(9).minute(0).second(0),
-        closes: base.hour(12).minute(0).second(0),
+        opens: start.add(dayOffset + 3, 'hour'),
+        closes: start.add(dayOffset + 8, 'hour'),
       }
       slots[slotKey(d, 'AFTERNOON')] = {
-        opens: base.hour(18).minute(0).second(0),
-        closes: base.hour(21).minute(0).second(0),
+        opens: start.add(dayOffset + 9, 'hour'),
+        closes: start.add(dayOffset + 14, 'hour'),
       }
     })
     form.setFieldValue('slots', slots)
@@ -176,6 +177,9 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
           <Divider titlePlacement="start" plain>
             미션 슬롯 (Day별 오전·오후 카드 노출 시각)
           </Divider>
+          <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>
+            각 슬롯은 <b>방 시작 이후 ~ 최종선택 오픈 이전</b>이어야 하고, 시간대끼리 겹치면 안 됩니다. 자동 채우기를 권장합니다.
+          </Typography.Paragraph>
           <Button
             size="small"
             icon={<ThunderboltOutlined />}
