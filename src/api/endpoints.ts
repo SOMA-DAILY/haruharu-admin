@@ -3,13 +3,13 @@ import type {
   AdminAccount,
   AdminMe,
   AdminMission,
+  AdminMissionRevision,
   AssignGenderBody,
   CreateAdminAccountBody,
-  CreateMissionBody,
   CreateRoomBody,
   DemoAccessCode,
+  MissionRevisionBody,
   SetDemoCodeBody,
-  UpdateMissionBody,
   UpdateAdminAccountBody,
   DashboardMetrics,
   DashboardSummary,
@@ -100,11 +100,21 @@ export const adminsApi = {
   update: (id: number, body: UpdateAdminAccountBody) => patch<AdminAccount>(`/admins/${id}`, body),
 }
 
-// ===== 미션 카탈로그 (SUPER 전용) =====
+// ===== 미션 카탈로그 (SUPER 전용 · revision 모델) =====
+export interface MissionListQuery {
+  page?: number
+  size?: number
+}
 export const missionsApi = {
-  list: () => get<AdminMission[]>('/missions'),
-  create: (body: CreateMissionBody) => post<AdminMission>('/missions', body),
-  update: (id: number, body: UpdateMissionBody) => patch<AdminMission>(`/missions/${id}`, body),
+  list: (q?: MissionListQuery) => get<Paged<AdminMission>>('/missions', q),
+  create: (body: MissionRevisionBody) => post<AdminMission>('/missions', body),
+  // 수정 = 새 revision 발행 (과거 revision 보존)
+  publishRevision: (id: number, body: MissionRevisionBody) =>
+    post<AdminMission>(`/missions/${id}/revisions`, body),
+  changeStatus: (id: number, active: boolean) =>
+    patch<AdminMission>(`/missions/${id}/status`, { active }),
+  revisions: (id: number, q?: MissionListQuery) =>
+    get<Paged<AdminMissionRevision>>(`/missions/${id}/revisions`, q),
 }
 
 // ===== 데모 접근 코드 (SUPER 전용) =====
