@@ -173,7 +173,8 @@ export interface RoomMember {
   user_id: number
   gender: Gender | null // 초대코드 입장은 미수집 → 운영진이 부여
   joined_at: string
-  nickname: string | null
+  nickname: string | null // 실명 닉네임(프로필)
+  pseudonym: string | null // 방 세션 가명(미배정 시 null, BE #393/#400)
   age: number | null
   region: string | null
 }
@@ -235,6 +236,7 @@ export interface RoomMemberAssigned {
   member_id: number
   user_id: number
   gender: Gender
+  pseudonym: string | null // 성별 부여 시 백필 (BE #400)
 }
 
 // ===== 유저 =====

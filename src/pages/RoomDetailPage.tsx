@@ -166,7 +166,13 @@ export default function RoomDetailPage() {
 
   const memberColumns: ColumnsType<RoomMember> = [
     { title: '유저 ID', dataIndex: 'user_id', width: 90, render: (v: number) => <a onClick={() => navigate(`/users/${v}`)}>{v}</a> },
-    { title: '닉네임', dataIndex: 'nickname', render: (v: string | null) => v ?? <Tag>미설정</Tag> },
+    { title: '닉네임(실명)', dataIndex: 'nickname', render: (v: string | null) => v ?? <Tag>미설정</Tag> },
+    {
+      title: '가명',
+      dataIndex: 'pseudonym',
+      width: 100,
+      render: (v: string | null) => (v ? <Tag color="purple">{v}</Tag> : <Tag>미배정</Tag>),
+    },
     {
       title: '성별',
       dataIndex: 'gender',
