@@ -25,6 +25,9 @@ import type {
   RoomListItem,
   RoomMemberAssigned,
   RoomStatus,
+  RoomActivity,
+  RoomActivitySummary,
+  RoomActivityType,
   TokenPair,
   UserDetail,
   UserListItem,
@@ -55,7 +58,19 @@ export interface RoomListQuery {
   page?: number
   size?: number
 }
+export interface RoomActivityQuery {
+  day?: number
+  userId?: number
+  type?: RoomActivityType
+  page?: number
+  size?: number
+  order?: 'asc' | 'desc'
+}
 export const roomsApi = {
+  activities: (roomId: number, q: RoomActivityQuery) => get<Paged<RoomActivity>>(`/rooms/${roomId}/activities`, q),
+  selections: (roomId: number) => get<import('./types').RoomSelection[]>(`/rooms/${roomId}/selections`),
+  activitySummary: (roomId: number, q: Pick<RoomActivityQuery, 'day' | 'userId'>) =>
+    get<RoomActivitySummary>(`/rooms/${roomId}/activity/summary`, q),
   list: (q: RoomListQuery) => get<Paged<RoomListItem>>('/rooms', q),
   detail: (roomId: number) => get<RoomDetail>(`/rooms/${roomId}`),
   // 쓰기 (SUPER·OPERATOR)

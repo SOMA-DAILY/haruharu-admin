@@ -193,6 +193,50 @@ export interface RoomDetail {
   members: RoomMember[]
 }
 
+export type RoomActivityType = 'VIDEO' | 'CHAT' | 'REACTION' | 'QUESTION'
+export interface ActivityParticipant { user_id: number; name: string }
+export interface RoomSelection {
+  chooser: ActivityParticipant
+  selected: ActivityParticipant | null
+  submitted: boolean
+  mutual: boolean
+  matched: boolean
+}
+export interface ActivityVideo {
+  slot_start: string | null
+  id: number
+  video_url: string
+  thumbnail_url: string | null
+  caption: string | null
+  hidden: boolean
+  mission_id: number | null
+}
+export interface RoomActivity {
+  type: RoomActivityType
+  id: number
+  occurred_at: string
+  day: number | null
+  actor: ActivityParticipant | null
+  target: ActivityParticipant | null
+  content: string | null
+  video: ActivityVideo | null
+  reaction_type: string | null
+  answer: string | null
+  answered_at: string | null
+}
+export interface RoomActivitySummary {
+  counts: { videos: number; chats: number; reactions: number; questions: number }
+  members: {
+    user_id: number
+    name: string
+    videos: number
+    chats: number
+    reactions_sent: number
+    reactions_received: number
+    questions_received: number
+  }[]
+}
+
 // 방 생성·초대코드 (초대코드 MVP)
 // 방별 미션 슬롯 (BE #361) — total_days × 2(오전/오후)개 필수
 export interface RoomMissionSlot {
