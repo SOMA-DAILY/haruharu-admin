@@ -26,6 +26,8 @@ import { useAuth } from '../auth/AuthContext'
 import { RoomStatusTag, RoomInviteStatusTag } from '../components/StatusTag'
 import { ApiError } from '../api/client'
 import type { RoomMember, RoomInvite, Gender } from '../api/types'
+import RoomActivityPanel from '../components/RoomActivityPanel'
+import RoomSelectionPanel from '../components/RoomSelectionPanel'
 
 const fmt = (d: Dayjs) => d.format('YYYY-MM-DDTHH:mm:ss')
 
@@ -240,8 +242,6 @@ export default function RoomDetailPage() {
               </Descriptions>
             </Card>
 
-            {canWrite && <InvitesCard roomId={roomId} canWrite={canWrite} />}
-
             <Card title={`참여자 (${data.members.length})`}>
               <Table<RoomMember>
                 rowKey="member_id"
@@ -251,6 +251,11 @@ export default function RoomDetailPage() {
                 size="small"
               />
             </Card>
+
+            <RoomActivityPanel key={roomId} room={data} />
+            <RoomSelectionPanel roomId={roomId} />
+
+            {canWrite && <InvitesCard roomId={roomId} canWrite={canWrite} />}
           </Space>
         )}
       </Skeleton>
