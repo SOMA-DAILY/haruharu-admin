@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import {
   Modal,
   Form,
@@ -293,20 +293,17 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
   const startsAt: Dayjs | undefined = AntForm.useWatch('starts_at', form)
   const finalOpensAt: Dayjs | undefined = AntForm.useWatch('final_selection_opens_at', form)
   const [scheduleRows, setScheduleRows] = useState<ScheduleRow[]>(() => defaultRows())
-  const anchorKey = `${startsAt?.valueOf() ?? ''}|${finalOpensAt?.valueOf() ?? ''}`
-  const lastAnchor = useRef(anchorKey)
-  useEffect(() => {
-    if (lastAnchor.current === anchorKey) return
-    lastAnchor.current = anchorKey
+  const onValuesChange = (changed: Partial<FormValues>, all: FormValues) => {
+    if (!('starts_at' in changed || 'final_selection_opens_at' in changed)) return
     setScheduleRows((prev) =>
       prev.map((r) => {
         if (!r.rule || r.dirty) return r
-        const run_at = resolveRunAt(r.rule, startsAt, finalOpensAt)
+        const run_at = resolveRunAt(r.rule, all.starts_at, all.final_selection_opens_at)
         // 시각이 채워졌으면 이전 오류('시각을 선택하세요.') 제거
         return { ...r, run_at, error: run_at ? undefined : r.error }
       }),
     )
-  }, [anchorKey, startsAt, finalOpensAt])
+  }
 
   const close = () => {
     form.resetFields()
@@ -381,7 +378,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
       const rowErrors = new Map<number, string>()
       if (e instanceof ApiError && e.status === 400 && e.fieldErrors) {
         for (const [field, msg] of Object.entries(e.fieldErrors)) {
-          const m = /^(?:chat_schedule|chatSchedule)\[(\d+)\]/.exec(field)
+          const m = /^chat_schedule\[(\d+)\]/.exec(field)
           if (m && Number(m[1]) < scheduleRows.length && !rowErrors.has(Number(m[1]))) rowErrors.set(Number(m[1]), msg)
         }
       }
@@ -435,7 +432,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
           }
         />
       ) : (
-        <Form form={form} layout="vertical" onFinish={onFinish} requiredMark={false} initialValues={{ total_days: 3, max_uses: 6 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ total_days: 3, max_uses: 6 }}>
           <Divider titlePlacement="start" plain>
             일정
           </Divider>

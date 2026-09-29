@@ -48,7 +48,7 @@ export default function RoomScheduleCard({
           <Space orientation="vertical" size={4}>
             {v.map((f) => (
               <Tag key={f} color="gold" style={{ marginInlineEnd: 0 }}>
-                {REVEAL_LABEL[f] ?? f}
+                {REVEAL_LABEL[f]}
               </Tag>
             ))}
           </Space>
@@ -134,7 +134,6 @@ export default function RoomScheduleCard({
           columns={columns}
           dataSource={rows}
           pagination={false}
-          rowClassName={(r) => (isPast(r) ? 'room-schedule-row-past' : '')}
           onRow={(r) => ({
             style: isPast(r) ? { color: token.colorTextTertiary, background: token.colorFillQuaternary } : undefined,
             // 지난 행은 눌러서 읽기 전용으로 열어봄 (E2-3)

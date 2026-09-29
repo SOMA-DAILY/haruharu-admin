@@ -45,23 +45,9 @@ export class ApiError extends Error {
   }
 }
 
-// error.field(단일) 또는 error.fields(배열 [{field,message}] / 맵 {field: message}) 를 칸별 메시지로
-function toFieldErrors(err: unknown): Record<string, string> | undefined {
-  if (!err || typeof err !== 'object') return undefined
-  const e = err as { field?: unknown; fields?: unknown; message?: unknown }
-  const out: Record<string, string> = {}
-  if (typeof e.field === 'string' && typeof e.message === 'string') out[e.field] = e.message
-  if (Array.isArray(e.fields)) {
-    for (const f of e.fields as { field?: unknown; message?: unknown }[]) {
-      if (typeof f?.field === 'string' && typeof f?.message === 'string') out[f.field] = f.message
-    }
-  } else if (e.fields && typeof e.fields === 'object') {
-    for (const [k, v] of Object.entries(e.fields as Record<string, unknown>)) {
-      if (typeof v === 'string') out[k] = v
-    }
-  }
-  return Object.keys(out).length ? out : undefined
-}
+// error.fields [{field, message}] 를 칸별 메시지로
+const toFieldErrors = (fields?: { field: string; message: string }[]) =>
+  fields?.length ? Object.fromEntries(fields.map((f) => [f.field, f.message])) : undefined
 
 // 응답: { isSuccess, data, error } 래퍼를 벗겨 data만 반환
 http.interceptors.response.use(
@@ -88,7 +74,7 @@ http.interceptors.response.use(
     }
     const err = error.response?.data?.error
     return Promise.reject(
-      new ApiError(err?.code ?? 'NETWORK', err?.message ?? error.message, status, toFieldErrors(err)),
+      new ApiError(err?.code ?? 'NETWORK', err?.message ?? error.message, status, toFieldErrors(err?.fields)),
     )
   },
 )

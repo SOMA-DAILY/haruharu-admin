@@ -14,7 +14,6 @@ import type {
   CreateRoomBody,
   MissionRevisionBody,
   ReissueInviteBody,
-  RoomScheduleItem,
   ScheduleItemBody,
   SetDemoCodeBody,
   UpdateAdminAccountBody,
@@ -87,10 +86,8 @@ export const useRoomSchedule = (roomId: number) =>
     queryKey: ['room-schedule', roomId],
     queryFn: () => roomsApi.schedule(roomId),
     enabled: roomId > 0,
-    refetchInterval: (query) => {
-      const rows = query.state.data as RoomScheduleItem[] | undefined
-      return rows?.some((r) => r.status === 'SCHEDULED' || r.status === 'SENDING') ? 15000 : false
-    },
+    refetchInterval: (query) =>
+      query.state.data?.some((r) => r.status === 'SCHEDULED' || r.status === 'SENDING') ? 15000 : false,
   })
 
 const useScheduleMutation = <V,>(roomId: number, fn: (v: V) => Promise<unknown>) => {

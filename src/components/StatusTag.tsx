@@ -75,7 +75,7 @@ const SCHEDULE_MAP: Record<ScheduleStatus, { color: string; label: string }> = {
   FAILED: { color: 'red', label: '실패' },
 }
 export function ScheduleStatusTag({ status, failReason }: { status: ScheduleStatus; failReason?: string | null }) {
-  const m = SCHEDULE_MAP[status] ?? { color: 'default', label: status }
+  const m = SCHEDULE_MAP[status]
   const tag = <Tag color={m.color}>{m.label}</Tag>
   return status === 'FAILED' && failReason ? <Tooltip title={failReason}>{tag}</Tooltip> : tag
 }

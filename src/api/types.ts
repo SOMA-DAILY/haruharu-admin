@@ -5,7 +5,7 @@
 export interface ApiResponse<T> {
   isSuccess: boolean
   data: T | null
-  error?: { code: string; message: string } | null
+  error?: { code: string; message: string; fields?: { field: string; message: string }[] } | null
 }
 
 export interface PageMeta {

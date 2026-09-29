@@ -52,22 +52,6 @@ type Values = {
   push_body?: string
 }
 
-// 서버 field 이름(snake/camel) → 폼 칸
-const FIELD_MAP: Record<string, keyof Values> = {
-  run_at: 'run_at',
-  runAt: 'run_at',
-  reveal_fields: 'reveal_fields',
-  revealFields: 'reveal_fields',
-  message_content: 'message_content',
-  messageContent: 'message_content',
-  push_title: 'push_title',
-  pushTitle: 'push_title',
-  push_body: 'push_body',
-  pushBody: 'push_body',
-}
-
-const isPending = (room: RoomDetail) => room.status === 'PENDING'
-
 // 표(E1)와 모달(E2)이 같이 쓰는 확인창 3종 + 409 처리
 // eslint-disable-next-line react-refresh/only-export-components
 export function useScheduleActions(roomId: number, room: RoomDetail) {
@@ -91,23 +75,22 @@ export function useScheduleActions(roomId: number, room: RoomDetail) {
   const confirmSendNow = (onOk: () => Promise<void>) =>
     modal.confirm({
       title: '지금 보낼까요?',
-      content: isPending(room) ? '방이 열릴 때 나가요' : undefined,
+      content: room.status === 'PENDING' ? '방이 열릴 때 나가요' : undefined,
       okText: '보내기',
       cancelText: '닫기',
       onOk,
     })
 
-  const sendNow = (item: RoomScheduleItem, after?: () => void) =>
+  const sendNow = (item: RoomScheduleItem) =>
     confirmSendNow(async () => {
       try {
         await sendNowMut.mutateAsync(item.id)
-        after?.()
       } catch (e) {
         handleError(e, '지금 보내기에 실패했습니다.')
       }
     })
 
-  const cancel = (item: RoomScheduleItem, after?: () => void) =>
+  const cancel = (item: RoomScheduleItem) =>
     modal.confirm({
       title: '예약을 취소할까요?',
       okType: 'danger',
@@ -116,7 +99,6 @@ export function useScheduleActions(roomId: number, room: RoomDetail) {
       onOk: async () => {
         try {
           await cancelMut.mutateAsync(item.id)
-          after?.()
         } catch (e) {
           handleError(e, '예약 취소에 실패했습니다.')
         }
@@ -261,21 +243,9 @@ export default function ScheduleItemModal({
   })
 
   const applyServerError = (e: unknown) => {
-    if (e instanceof ApiError && e.status === 400) {
-      const fields = e.fieldErrors
-      if (fields) {
-        const mapped = Object.entries(fields)
-          .filter(([k]) => FIELD_MAP[k])
-          .map(([k, msg]) => ({ name: FIELD_MAP[k], errors: [msg] }))
-        if (mapped.length) {
-          form.setFields(mapped)
-          return
-        }
-      }
-      if (e.message === EMPTY_MESSAGE) {
-        form.setFields([{ name: 'message_content', errors: [e.message] }])
-        return
-      }
+    if (e instanceof ApiError && e.status === 400 && e.fieldErrors) {
+      form.setFields(Object.entries(e.fieldErrors).map(([name, msg]) => ({ name: name as keyof Values, errors: [msg] })))
+      return
     }
     if (actions.handleError(e, '저장에 실패했습니다.')) onClose()
   }
@@ -355,7 +325,6 @@ export default function ScheduleItemModal({
               </Form.Item>
               <Form.Item
                 name="run_at"
-                noStyle={false}
                 style={{ margin: 0 }}
                 rules={[{ required: mode !== 'NOW', message: '시각을 선택하세요.' }]}
               >
