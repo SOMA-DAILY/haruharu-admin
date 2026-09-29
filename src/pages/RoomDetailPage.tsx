@@ -28,6 +28,7 @@ import { ApiError } from '../api/client'
 import type { RoomMember, RoomInvite, Gender } from '../api/types'
 import RoomActivityPanel from '../components/RoomActivityPanel'
 import RoomSelectionPanel from '../components/RoomSelectionPanel'
+import RoomScheduleCard from '../components/RoomScheduleCard'
 
 const fmt = (d: Dayjs) => d.format('YYYY-MM-DDTHH:mm:ss')
 
@@ -252,6 +253,7 @@ export default function RoomDetailPage() {
               />
             </Card>
 
+            <RoomScheduleCard roomId={roomId} room={data} canWrite={canWrite} />
             <RoomActivityPanel key={roomId} room={data} />
             <RoomSelectionPanel roomId={roomId} />
 

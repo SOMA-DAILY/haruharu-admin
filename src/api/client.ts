@@ -35,12 +35,19 @@ http.interceptors.request.use((config) => {
 export class ApiError extends Error {
   code: string
   status?: number
-  constructor(code: string, message: string, status?: number) {
+  // 400 VALIDATION_ERROR 의 칸별 메시지 (서버가 field 정보를 줄 때만)
+  fieldErrors?: Record<string, string>
+  constructor(code: string, message: string, status?: number, fieldErrors?: Record<string, string>) {
     super(message)
     this.code = code
     this.status = status
+    this.fieldErrors = fieldErrors
   }
 }
+
+// error.fields [{field, message}] 를 칸별 메시지로
+const toFieldErrors = (fields?: { field: string; message: string }[]) =>
+  fields?.length ? Object.fromEntries(fields.map((f) => [f.field, f.message])) : undefined
 
 // 응답: { isSuccess, data, error } 래퍼를 벗겨 data만 반환
 http.interceptors.response.use(
@@ -67,7 +74,7 @@ http.interceptors.response.use(
     }
     const err = error.response?.data?.error
     return Promise.reject(
-      new ApiError(err?.code ?? 'NETWORK', err?.message ?? error.message, status),
+      new ApiError(err?.code ?? 'NETWORK', err?.message ?? error.message, status, toFieldErrors(err?.fields)),
     )
   },
 )
@@ -83,6 +90,10 @@ export async function post<T>(url: string, body?: unknown): Promise<T> {
 }
 export async function patch<T>(url: string, body?: unknown): Promise<T> {
   const res = await http.patch<T>(url, body)
+  return res.data
+}
+export async function del<T>(url: string): Promise<T> {
+  const res = await http.delete<T>(url)
   return res.data
 }
 export async function put<T>(url: string, body?: unknown): Promise<T> {

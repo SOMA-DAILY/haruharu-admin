@@ -14,6 +14,7 @@ import type {
   CreateRoomBody,
   MissionRevisionBody,
   ReissueInviteBody,
+  ScheduleItemBody,
   SetDemoCodeBody,
   UpdateAdminAccountBody,
 } from './types'
@@ -77,6 +78,37 @@ export const useAssignGender = (roomId: number) => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['room', roomId] }),
   })
 }
+
+// ===== 방 편성 (채팅 P0) =====
+// 예약/발송중 행이 있을 때만 15초 폴링 (상태는 app 1분 잡이 바꿈)
+export const useRoomSchedule = (roomId: number) =>
+  useQuery({
+    queryKey: ['room-schedule', roomId],
+    queryFn: () => roomsApi.schedule(roomId),
+    enabled: roomId > 0,
+    refetchInterval: (query) =>
+      query.state.data?.some((r) => r.status === 'SCHEDULED' || r.status === 'SENDING') ? 15000 : false,
+  })
+
+const useScheduleMutation = <V,>(roomId: number, fn: (v: V) => Promise<unknown>) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['room-schedule', roomId] }),
+  })
+}
+export const useCreateScheduleItem = (roomId: number) =>
+  useScheduleMutation(roomId, (body: ScheduleItemBody) => roomsApi.createScheduleItem(roomId, body))
+export const useUpdateScheduleItem = (roomId: number) =>
+  useScheduleMutation(roomId, ({ itemId, body }: { itemId: number; body: ScheduleItemBody }) =>
+    roomsApi.updateScheduleItem(roomId, itemId, body),
+  )
+export const useSendScheduleNow = (roomId: number) =>
+  useScheduleMutation(roomId, (itemId: number) => roomsApi.sendScheduleNow(roomId, itemId))
+export const useCancelScheduleItem = (roomId: number) =>
+  useScheduleMutation(roomId, (itemId: number) => roomsApi.cancelScheduleItem(roomId, itemId))
+export const useDeleteScheduleMessage = (roomId: number) =>
+  useScheduleMutation(roomId, (itemId: number) => roomsApi.deleteScheduleMessage(roomId, itemId))
 
 export const useUsers = (q: UserListQuery) =>
   useQuery({ queryKey: ['users', q], queryFn: () => usersApi.list(q) })

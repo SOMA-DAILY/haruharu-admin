@@ -1,4 +1,4 @@
-import { get, patch, post, put } from './client'
+import { del, get, patch, post, put } from './client'
 import type {
   AdminAccount,
   AdminMe,
@@ -24,6 +24,8 @@ import type {
   RoomInvite,
   RoomListItem,
   RoomMemberAssigned,
+  RoomScheduleItem,
+  ScheduleItemBody,
   RoomStatus,
   RoomActivity,
   RoomActivitySummary,
@@ -81,6 +83,18 @@ export const roomsApi = {
   cancel: (roomId: number) => post<null>(`/rooms/${roomId}/cancel`),
   assignGender: (roomId: number, memberId: number, body: AssignGenderBody) =>
     patch<RoomMemberAssigned>(`/rooms/${roomId}/members/${memberId}`, body),
+  // 방 편성 (조회 전 역할, 쓰기 SUPER·OPERATOR)
+  schedule: (roomId: number) => get<RoomScheduleItem[]>(`/rooms/${roomId}/schedule`),
+  createScheduleItem: (roomId: number, body: ScheduleItemBody) =>
+    post<RoomScheduleItem>(`/rooms/${roomId}/schedule`, body),
+  updateScheduleItem: (roomId: number, itemId: number, body: ScheduleItemBody) =>
+    patch<RoomScheduleItem>(`/rooms/${roomId}/schedule/${itemId}`, body),
+  sendScheduleNow: (roomId: number, itemId: number) =>
+    post<RoomScheduleItem>(`/rooms/${roomId}/schedule/${itemId}/send-now`),
+  cancelScheduleItem: (roomId: number, itemId: number) =>
+    post<RoomScheduleItem>(`/rooms/${roomId}/schedule/${itemId}/cancel`),
+  deleteScheduleMessage: (roomId: number, itemId: number) =>
+    del<null>(`/rooms/${roomId}/schedule/${itemId}/message`),
 }
 
 // ===== 유저 (#193) =====
