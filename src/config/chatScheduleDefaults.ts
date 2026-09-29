@@ -1,7 +1,7 @@
 import type { Dayjs } from 'dayjs'
 import type { RevealField } from '../api/types'
 
-// 채팅 P0 기본 편성 (노션 채팅 P0 기능명세 §F3 기본 편성, 9/29 확정). 서버엔 기본값 없음.
+// 채팅 P0 기본 편성 (채팅 P0 기능명세 §F3). 서버엔 기본값 없음.
 // 방 생성 모달 [채팅 편성] 에 채워져 뜨고, 고친 채로 POST /rooms 의 chat_schedule[] 로 감.
 
 export const REVEAL_FIELDS: RevealField[] = ['MBTI', 'INTO_NOW', 'AGE', 'DEPARTMENT']
