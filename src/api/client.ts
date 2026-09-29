@@ -35,11 +35,32 @@ http.interceptors.request.use((config) => {
 export class ApiError extends Error {
   code: string
   status?: number
-  constructor(code: string, message: string, status?: number) {
+  // 400 VALIDATION_ERROR 의 칸별 메시지 (서버가 field 정보를 줄 때만)
+  fieldErrors?: Record<string, string>
+  constructor(code: string, message: string, status?: number, fieldErrors?: Record<string, string>) {
     super(message)
     this.code = code
     this.status = status
+    this.fieldErrors = fieldErrors
   }
+}
+
+// error.field(단일) 또는 error.fields(배열 [{field,message}] / 맵 {field: message}) 를 칸별 메시지로
+function toFieldErrors(err: unknown): Record<string, string> | undefined {
+  if (!err || typeof err !== 'object') return undefined
+  const e = err as { field?: unknown; fields?: unknown; message?: unknown }
+  const out: Record<string, string> = {}
+  if (typeof e.field === 'string' && typeof e.message === 'string') out[e.field] = e.message
+  if (Array.isArray(e.fields)) {
+    for (const f of e.fields as { field?: unknown; message?: unknown }[]) {
+      if (typeof f?.field === 'string' && typeof f?.message === 'string') out[f.field] = f.message
+    }
+  } else if (e.fields && typeof e.fields === 'object') {
+    for (const [k, v] of Object.entries(e.fields as Record<string, unknown>)) {
+      if (typeof v === 'string') out[k] = v
+    }
+  }
+  return Object.keys(out).length ? out : undefined
 }
 
 // 응답: { isSuccess, data, error } 래퍼를 벗겨 data만 반환
@@ -67,7 +88,7 @@ http.interceptors.response.use(
     }
     const err = error.response?.data?.error
     return Promise.reject(
-      new ApiError(err?.code ?? 'NETWORK', err?.message ?? error.message, status),
+      new ApiError(err?.code ?? 'NETWORK', err?.message ?? error.message, status, toFieldErrors(err)),
     )
   },
 )
@@ -83,6 +104,10 @@ export async function post<T>(url: string, body?: unknown): Promise<T> {
 }
 export async function patch<T>(url: string, body?: unknown): Promise<T> {
   const res = await http.patch<T>(url, body)
+  return res.data
+}
+export async function del<T>(url: string): Promise<T> {
+  const res = await http.delete<T>(url)
   return res.data
 }
 export async function put<T>(url: string, body?: unknown): Promise<T> {

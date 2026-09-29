@@ -1,4 +1,4 @@
-import { Tag } from 'antd'
+import { Tag, Tooltip } from 'antd'
 import type {
   RoomStatus,
   RoomInviteStatus,
@@ -7,6 +7,7 @@ import type {
   IapStore,
   Role,
   AdminAccountStatus,
+  ScheduleStatus,
 } from '../api/types'
 
 const ROOM_MAP: Record<RoomStatus, { color: string; label: string }> = {
@@ -64,4 +65,17 @@ export function RoleTag({ role }: { role: Role }) {
 
 export function AdminStatusTag({ status }: { status: AdminAccountStatus }) {
   return status === 'ACTIVE' ? <Tag color="green">활성</Tag> : <Tag color="default">비활성</Tag>
+}
+
+const SCHEDULE_MAP: Record<ScheduleStatus, { color: string; label: string }> = {
+  SCHEDULED: { color: 'blue', label: '예약' },
+  SENDING: { color: 'processing', label: '발송중' },
+  SENT: { color: 'green', label: '보냄' },
+  CANCELED: { color: 'default', label: '취소' },
+  FAILED: { color: 'red', label: '실패' },
+}
+export function ScheduleStatusTag({ status, failReason }: { status: ScheduleStatus; failReason?: string | null }) {
+  const m = SCHEDULE_MAP[status] ?? { color: 'default', label: status }
+  const tag = <Tag color={m.color}>{m.label}</Tag>
+  return status === 'FAILED' && failReason ? <Tooltip title={failReason}>{tag}</Tooltip> : tag
 }

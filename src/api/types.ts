@@ -187,6 +187,10 @@ export interface RoomDetail {
   current_day: number
   started_at: string | null
   ended_at: string | null
+  // 방 일정 (BE #457 추가. 옛 서버 응답엔 없을 수 있어 optional + nullable)
+  starts_at?: string | null
+  final_selection_opens_at?: string | null
+  ends_at?: string | null
   member_count: number
   female_count: number
   male_count: number
@@ -255,6 +259,7 @@ export interface CreateRoomBody {
   max_uses?: number | null
   invite_expires_at?: string | null
   mission_slots: RoomMissionSlot[]
+  chat_schedule?: ScheduleItemBody[]
 }
 export interface RoomCreated {
   room_id: number
@@ -269,6 +274,35 @@ export interface RoomInvite {
   expires_at: string | null
   created_by: string
 }
+// 방 편성 (채팅 P0 F3/F4, BE #457)
+export type RevealField = 'MBTI' | 'INTO_NOW' | 'AGE' | 'DEPARTMENT'
+export type ScheduleStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELED' | 'FAILED'
+export interface RoomScheduleItem {
+  id: number
+  run_at: string
+  day: number | null
+  reveal_fields: RevealField[] | null
+  message_content: string | null
+  push: boolean
+  push_title: string | null
+  push_body: string | null
+  status: ScheduleStatus
+  fail_reason: string | null
+  sent_message_id: number | null
+  created_by: string | null
+  sent_at: string | null
+  message_deleted_at?: string | null // 보낸 운영 글 삭제 시각 (옛 응답엔 없음)
+}
+// 방 생성 chat_schedule[] 한 줄 · 편성 행 추가/수정 공통 바디 (run_at null = 지금)
+export interface ScheduleItemBody {
+  run_at: string | null
+  reveal_fields: RevealField[]
+  message_content: string | null
+  push: boolean
+  push_title: string | null
+  push_body: string | null
+}
+
 export interface ReissueInviteBody {
   max_uses?: number | null
   expires_at?: string | null
