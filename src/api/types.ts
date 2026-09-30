@@ -246,7 +246,8 @@ export interface CreateRoomBody {
   total_days: number
   max_uses?: number | null
   invite_expires_at?: string | null
-  mission_slots: RoomMissionSlot[]
+  mission_enabled: boolean // BE #450: 방 단위 미션 on/off (필수)
+  mission_slots?: RoomMissionSlot[] // 켜짐이면 total_days×2개, 꺼짐이면 생략
   chat_schedule?: ScheduleItemBody[]
 }
 export interface RoomCreated {

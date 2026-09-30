@@ -51,6 +51,7 @@ type FormValues = {
   total_days: number
   max_uses?: number
   invite_expires_at?: Dayjs
+  mission_enabled: boolean
   slots?: Record<string, SlotVal>
 }
 
@@ -288,6 +289,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
 
   const totalDays: number = AntForm.useWatch('total_days', form) ?? 3
   const days = Array.from({ length: Math.max(1, totalDays) }, (_, i) => i + 1)
+  const missionEnabled: boolean = AntForm.useWatch('mission_enabled', form) ?? true
 
   // 채팅 편성: 방 시작/최종선택 오픈이 바뀌면 손 안 댄 기본 줄만 재계산
   const startsAt: Dayjs | undefined = AntForm.useWatch('starts_at', form)
@@ -336,12 +338,15 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
   }
 
   const onFinish = async (v: FormValues) => {
+    // 미션 켜짐일 때만 슬롯 조립·전송. 꺼짐이면 미전송(BE #450).
     const mission_slots: RoomMissionSlot[] = []
-    for (const d of days) {
-      for (const p of PERIODS) {
-        const s = v.slots?.[slotKey(d, p)]
-        if (s?.opens && s?.closes) {
-          mission_slots.push({ day_number: d, period: p, opens_at: fmt(s.opens), closes_at: fmt(s.closes) })
+    if (v.mission_enabled) {
+      for (const d of days) {
+        for (const p of PERIODS) {
+          const s = v.slots?.[slotKey(d, p)]
+          if (s?.opens && s?.closes) {
+            mission_slots.push({ day_number: d, period: p, opens_at: fmt(s.opens), closes_at: fmt(s.closes) })
+          }
         }
       }
     }
@@ -369,7 +374,8 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
         total_days: v.total_days,
         max_uses: v.max_uses ?? null,
         invite_expires_at: v.invite_expires_at ? fmt(v.invite_expires_at) : null,
-        mission_slots,
+        mission_enabled: v.mission_enabled,
+        ...(v.mission_enabled ? { mission_slots } : {}),
         chat_schedule,
       })
       setCreated(res)
@@ -432,7 +438,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
           }
         />
       ) : (
-        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ total_days: 3, max_uses: 6 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ total_days: 3, max_uses: 6, mission_enabled: true }}>
           <Divider titlePlacement="start" plain>
             일정
           </Divider>
@@ -462,44 +468,57 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
           </div>
 
           <Divider titlePlacement="start" plain>
-            미션 슬롯 (Day별 오전·오후 카드 노출 시각)
+            미션
           </Divider>
-          <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>
-            각 슬롯은 <b>방 시작 이후 ~ 최종선택 오픈 이전</b>이어야 하고, 시간대끼리 겹치면 안 됩니다. 자동 채우기를 권장합니다.
-          </Typography.Paragraph>
-          <Button
-            size="small"
-            icon={<ThunderboltOutlined />}
-            onClick={autofill}
-            style={{ marginBottom: 12 }}
+          <Form.Item
+            name="mission_enabled"
+            label="미션 사용"
+            valuePropName="checked"
+            tooltip="끄면 이 방은 미션 슬롯을 만들지 않고 영상·그룹채팅 미션 활동도 기록하지 않습니다."
+            style={{ marginBottom: missionEnabled ? 8 : 0 }}
           >
-            시작시각 기준 자동 채우기
-          </Button>
-          {days.map((d) => (
-            <div key={d} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Day{d}</div>
-              {PERIODS.map((p) => (
-                <Space key={p} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
-                  <span style={{ width: 40, fontSize: 12, color: '#61656c' }}>{PERIOD_LABEL[p]}</span>
-                  <Form.Item
-                    name={['slots', slotKey(d, p), 'opens']}
-                    rules={[{ required: true, message: '노출 시작' }]}
-                    style={{ margin: 0 }}
-                  >
-                    <DatePicker showTime placeholder="노출 시작" format="MM-DD HH:mm" />
-                  </Form.Item>
-                  <span style={{ color: '#9aa0a8' }}>~</span>
-                  <Form.Item
-                    name={['slots', slotKey(d, p), 'closes']}
-                    rules={[{ required: true, message: '노출 종료' }]}
-                    style={{ margin: 0 }}
-                  >
-                    <DatePicker showTime placeholder="노출 종료" format="MM-DD HH:mm" />
-                  </Form.Item>
-                </Space>
+            <Switch checkedChildren="사용" unCheckedChildren="미사용" />
+          </Form.Item>
+          {missionEnabled && (
+            <>
+              <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>
+                각 슬롯은 <b>방 시작 이후 ~ 최종선택 오픈 이전</b>이어야 하고, 시간대끼리 겹치면 안 됩니다. 자동 채우기를 권장합니다.
+              </Typography.Paragraph>
+              <Button
+                size="small"
+                icon={<ThunderboltOutlined />}
+                onClick={autofill}
+                style={{ marginBottom: 12 }}
+              >
+                시작시각 기준 자동 채우기
+              </Button>
+              {days.map((d) => (
+                <div key={d} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Day{d}</div>
+                  {PERIODS.map((p) => (
+                    <Space key={p} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
+                      <span style={{ width: 40, fontSize: 12, color: '#61656c' }}>{PERIOD_LABEL[p]}</span>
+                      <Form.Item
+                        name={['slots', slotKey(d, p), 'opens']}
+                        rules={[{ required: true, message: '노출 시작' }]}
+                        style={{ margin: 0 }}
+                      >
+                        <DatePicker showTime placeholder="노출 시작" format="MM-DD HH:mm" />
+                      </Form.Item>
+                      <span style={{ color: '#9aa0a8' }}>~</span>
+                      <Form.Item
+                        name={['slots', slotKey(d, p), 'closes']}
+                        rules={[{ required: true, message: '노출 종료' }]}
+                        style={{ margin: 0 }}
+                      >
+                        <DatePicker showTime placeholder="노출 종료" format="MM-DD HH:mm" />
+                      </Form.Item>
+                    </Space>
+                  ))}
+                </div>
               ))}
-            </div>
-          ))}
+            </>
+          )}
 
           <ChatScheduleSection
             rows={scheduleRows}
