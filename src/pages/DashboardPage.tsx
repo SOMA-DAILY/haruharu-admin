@@ -2,7 +2,7 @@ import { Alert, Empty, Skeleton } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { useDashboardMetrics, useDashboardSummary } from '../api/queries'
-import type { DashboardMetrics, MatchingPoint } from '../api/types'
+import type { DashboardMetrics } from '../api/types'
 import './DashboardPage.css'
 
 // API 없는 섹션 공통 래퍼: 목업 비주얼은 유지하되 회색+마스크로 "추후" 표시
@@ -17,9 +17,9 @@ function Soon({ children, label = '추후 제공' }: { children: React.ReactNode
   )
 }
 
-// 가입·참가신청 추세 (metrics) — 목업 SVG 스타일 유지, 의존성 없이 실데이터로 렌더
-function TrendChart({ signups, daily }: { signups: DashboardMetrics['signups']; daily: MatchingPoint[] }) {
-  const dates = signups.length ? signups.map((s) => s.date) : daily.map((d) => d.date)
+// 가입 추세 (metrics) — 목업 SVG 스타일 유지, 의존성 없이 실데이터로 렌더
+function TrendChart({ signups }: { signups: DashboardMetrics['signups'] }) {
+  const dates = signups.map((s) => s.date)
   const n = dates.length
   if (n === 0) return <Empty description="기간 내 데이터 없음" />
 
@@ -28,8 +28,7 @@ function TrendChart({ signups, daily }: { signups: DashboardMetrics['signups']; 
     X0 = 10,
     X1 = 610
   const signupVals = signups.map((s) => s.count)
-  const appVals = daily.map((d) => d.applications)
-  const maxV = Math.max(1, ...signupVals, ...appVals)
+  const maxV = Math.max(1, ...signupVals)
   const xAt = (i: number) => (n <= 1 ? (X0 + X1) / 2 : X0 + (i / (n - 1)) * (X1 - X0))
   const yAt = (v: number) => BOT - (v / maxV) * (BOT - TOP)
   const pts = (vals: number[]) => vals.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ')
@@ -53,12 +52,6 @@ function TrendChart({ signups, daily }: { signups: DashboardMetrics['signups']; 
           <line x1="0" y1="140" x2="620" y2="140" />
           <line x1="0" y1="180" x2="620" y2="180" />
         </g>
-        {appVals.length > 0 && (
-          <>
-            <path d={area(appVals)} fill="rgba(124,92,255,.10)" />
-            <polyline points={pts(appVals)} fill="none" stroke="var(--violet)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-          </>
-        )}
         {signupVals.length > 0 && (
           <>
             <path d={area(signupVals)} fill="rgba(22,119,255,.10)" />
@@ -75,61 +68,6 @@ function TrendChart({ signups, daily }: { signups: DashboardMetrics['signups']; 
   )
 }
 
-// 매칭 성사율 도넛 (metrics.overall)
-function MatchDonut({ overall }: { overall: DashboardMetrics['matching']['overall'] }) {
-  const C = 2 * Math.PI * 52 // 원주 ≈ 326.7
-  const rate = overall.success_rate // 0~1 또는 null(분모 0)
-  const offset = rate == null ? C : C * (1 - rate)
-  const pct = rate == null ? '—' : `${Math.round(rate * 100)}%`
-  return (
-    <div className="donut-wrap">
-      <div className="donut-center">
-        <svg width={132} height={132} viewBox="0 0 132 132">
-          <circle cx="66" cy="66" r="52" fill="none" stroke="#eef0f3" strokeWidth={16} />
-          <circle
-            cx="66"
-            cy="66"
-            r="52"
-            fill="none"
-            stroke="var(--green)"
-            strokeWidth={16}
-            strokeDasharray={C.toFixed(1)}
-            strokeDashoffset={offset.toFixed(1)}
-            strokeLinecap="round"
-            transform="rotate(-90 66 66)"
-          />
-        </svg>
-        <div className="cval">
-          <b>{pct}</b>
-          <span>매칭 성사율</span>
-        </div>
-      </div>
-      <div className="dstat">
-        <div className="li">
-          <span className="k">
-            <span className="sw" style={{ background: 'var(--green)' }} />성사(matched)
-          </span>
-          <span className="v">{overall.matched}</span>
-        </div>
-        <div className="li">
-          <span className="k">
-            <span className="sw" style={{ background: '#eef0f3' }} />만료(expired)
-          </span>
-          <span className="v">{overall.expired}</span>
-        </div>
-        <div className="li">
-          <span className="k">신청(applications)</span>
-          <span className="v">{overall.applications}</span>
-        </div>
-        <div className="li">
-          <span className="k">성공률</span>
-          <span className="v">{rate == null ? '—' : `${(rate * 100).toFixed(1)}%`}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function DashboardPage() {
   const { data, isLoading, isError } = useDashboardSummary()
   const { data: metrics, isLoading: metricsLoading, isError: metricsError } = useDashboardMetrics()
@@ -141,10 +79,6 @@ export default function DashboardPage() {
     : []
   const maxDay = Math.max(1, ...dayEntries.map(([, v]) => v))
   const lastDay = dayEntries.length ? dayEntries[dayEntries.length - 1][0] : null
-
-  // 성비 (여:남)
-  const q = data?.matching_queue
-  const ratio = q && q.male > 0 ? `${(q.female / q.male).toFixed(1)}:1` : '—'
 
   return (
     <div className="dash">
@@ -209,21 +143,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* 매칭 대기열 (실데이터) */}
-                  <div className="kpi">
-                    <div className="top">
-                      <span className="label">매칭 대기열</span>
-                      <span className="ic violet">🔀</span>
-                    </div>
-                    <div className="val">
-                      {q?.total ?? 0}
-                      <small>명</small>
-                    </div>
-                    <div className="meta">
-                      여 {q?.female ?? 0} · 남 {q?.male ?? 0} · 성비 {ratio}
-                    </div>
-                  </div>
-
                   {/* 오늘 가입 (실데이터) */}
                   <div className="kpi">
                     <div className="top">
@@ -253,51 +172,30 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Row: 가입·참가신청 추세 + 매칭 성사율 (metrics #244 실연동) */}
-                <div className="row">
-                  <div className="panel">
-                    <div className="ph">
-                      <h3>가입 · 참가신청 추세</h3>
-                      <div className="legend">
-                        <span>
-                          <i style={{ background: 'var(--blue)' }} />
-                          가입
-                        </span>
-                        <span>
-                          <i style={{ background: 'var(--violet)' }} />
-                          참가신청
-                        </span>
-                      </div>
-                    </div>
-                    <div className="pb">
-                      {metricsError ? (
-                        <Alert type="error" showIcon message="추이 데이터를 불러오지 못했습니다." />
-                      ) : metricsLoading || !metrics ? (
-                        <Skeleton.Node active style={{ width: '100%', height: 200 }}>
-                          <div />
-                        </Skeleton.Node>
-                      ) : (
-                        <TrendChart signups={metrics.signups} daily={metrics.matching.daily} />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="panel">
-                    <div className="ph">
-                      <h3>매칭 현황</h3>
-                      <span className="hint">
+                {/* 가입 추세 (metrics) — 자동매칭 지표 제거(BE #452) 후 전폭 */}
+                <div className="panel" style={{ marginBottom: 16 }}>
+                  <div className="ph">
+                    <h3>가입 추세</h3>
+                    <div className="legend">
+                      <span>
+                        <i style={{ background: 'var(--blue)' }} />
+                        가입
+                      </span>
+                      <span className="hint" style={{ marginLeft: 'auto' }}>
                         {metrics ? `${metrics.range.from} ~ ${metrics.range.to}` : '최근 추이'}
                       </span>
                     </div>
-                    <div className="pb">
-                      {metricsError ? (
-                        <Alert type="error" showIcon message="매칭 지표를 불러오지 못했습니다." />
-                      ) : metricsLoading || !metrics ? (
-                        <Skeleton active paragraph={{ rows: 4 }} />
-                      ) : (
-                        <MatchDonut overall={metrics.matching.overall} />
-                      )}
-                    </div>
+                  </div>
+                  <div className="pb">
+                    {metricsError ? (
+                      <Alert type="error" showIcon message="추이 데이터를 불러오지 못했습니다." />
+                    ) : metricsLoading || !metrics ? (
+                      <Skeleton.Node active style={{ width: '100%', height: 200 }}>
+                        <div />
+                      </Skeleton.Node>
+                    ) : (
+                      <TrendChart signups={metrics.signups} />
+                    )}
                   </div>
                 </div>
 
