@@ -135,25 +135,13 @@ export interface SetDemoCodeBody {
 // ===== 대시보드 =====
 export interface DashboardSummary {
   active_rooms: { total: number; by_day: Record<string, number> }
-  matching_queue: { total: number; female: number; male: number }
   today_signups: number
 }
 
-// 대시보드 추이(metrics) — 기간별 가입·매칭 시계열 (BE #244)
-export interface MatchingPoint {
-  date: string
-  applications: number
-  matched: number
-  expired: number
-  success_rate: number | null // matched/(matched+expired), 분모 0이면 null
-}
+// 대시보드 추이(metrics) — 기간별 가입 시계열 (자동매칭 지표는 BE #452에서 제거)
 export interface DashboardMetrics {
   range: { from: string; to: string }
   signups: { date: string; count: number }[]
-  matching: {
-    daily: MatchingPoint[]
-    overall: Omit<MatchingPoint, 'date'>
-  }
 }
 
 // ===== 세션(방) =====
