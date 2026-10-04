@@ -1,10 +1,18 @@
 import { Tag } from 'antd'
-import type { RoomStatus, UserStatus, IapPurchaseStatus } from '../api/types'
+import type { RoomStatus, UserStatus, IapPurchaseStatus, OperatorMission } from '../api/types'
 
 const ROOM_MAP: Record<RoomStatus, { color: string; label: string }> = {
   PENDING: { color: 'gold', label: '대기' },
   ACTIVE: { color: 'green', label: '진행중' },
   ENDED: { color: 'default', label: '종료' },
+  SELECTING: { color: 'purple', label: '최종선택' },
+  CANCELLED: { color: 'default', label: '취소' },
+}
+
+export function OperatorMissionStatusTag({ item }: { item: OperatorMission }) {
+  const statuses = { SCHEDULED: ['blue', '예약됨'], SENDING: ['processing', '발송 중'], SENT: ['green', '발송 완료'], FAILED: ['red', '발송 실패'], CANCELLED: ['default', '취소됨'] } as const
+  const [color, label] = statuses[item.status]
+  return <Tag color={item.delete_requested_at ? 'default' : color}>{item.delete_processed_at ? '삭제됨' : item.delete_requested_at ? '삭제 중' : label}</Tag>
 }
 
 const USER_MAP: Record<UserStatus, { color: string; label: string }> = {

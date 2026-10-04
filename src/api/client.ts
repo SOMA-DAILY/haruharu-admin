@@ -79,3 +79,9 @@ export async function post<T>(url: string, body?: unknown): Promise<T> {
   const res = await http.post<T>(url, body)
   return res.data
 }
+export async function put<T>(url: string, body?: unknown): Promise<T> {
+  return (await http.put<T>(url, body)).data
+}
+export async function del<T>(url: string): Promise<T> {
+  return (await http.delete<T>(url)).data
+}

@@ -22,7 +22,7 @@ export interface Paged<T> {
 
 // ===== Enum =====
 export type Role = 'SUPER' | 'OPERATOR' | 'CS'
-export type RoomStatus = 'PENDING' | 'ACTIVE' | 'ENDED'
+export type RoomStatus = 'PENDING' | 'ACTIVE' | 'SELECTING' | 'ENDED' | 'CANCELLED'
 export type UserStatus = 'ONBOARDING' | 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED'
 export type IapStore = 'APP_STORE' | 'PLAY_STORE'
 export type IapPurchaseStatus = 'OWNED' | 'REFUNDED'
@@ -84,6 +84,24 @@ export interface RoomDetail {
   female_count: number
   male_count: number
   members: RoomMember[]
+}
+
+export type OperatorMissionStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELLED'
+export interface OperatorMissionTemplate { template_id: string; day_number: number; position: number; content: string; category: string }
+export interface MissionImage { id: number; url: string; width: number; height: number }
+export interface OperatorMission {
+  id: number; room_id: number; template_id: string; content: string; notify_participants: boolean; image_id: number | null; image: MissionImage | null
+  scheduled_at: string; immediate: boolean; status: OperatorMissionStatus; request_key: string
+  message_id: number | null; sent_at: string | null; fail_reason: string | null
+  delete_requested_at: string | null; delete_processed_at: string | null
+}
+export interface OperatorMissionPage {
+  room_id: number; room_status: RoomStatus; starts_at: string | null
+  final_selection_opens_at: string | null; server_now: string
+  templates: OperatorMissionTemplate[]; items: OperatorMission[]; next_cursor: number | null
+}
+export interface OperatorMissionInput {
+  request_key: string; template_id: string; content: string; notify_participants: boolean; scheduled_at: string | null; image_id?: number | null
 }
 
 // ===== 유저 =====

@@ -1,4 +1,5 @@
-import { get, post } from './client'
+import { get, post, put, del, http } from './client'
+import type { OperatorMission, OperatorMissionInput, OperatorMissionPage, MissionImage } from './types'
 import type {
   AdminMe,
   DashboardSummary,
@@ -35,6 +36,19 @@ export interface RoomListQuery {
 export const roomsApi = {
   list: (q: RoomListQuery) => get<Paged<RoomListItem>>('/rooms', q),
   detail: (roomId: number) => get<RoomDetail>(`/rooms/${roomId}`),
+}
+
+export const operatorMissionsApi = {
+  uploadImage: async (roomId: number, file: File, signal: AbortSignal) => {
+    const body = new FormData()
+    body.append('file', file)
+    return (await http.post<MissionImage>(`/rooms/${roomId}/operator-missions/images`, body, { signal, timeout: 60000 })).data
+  },
+  list: (roomId: number, cursor?: number) => get<OperatorMissionPage>(`/rooms/${roomId}/operator-missions`, { cursor, size: 20 }),
+  create: (roomId: number, body: OperatorMissionInput) => post<OperatorMission>(`/rooms/${roomId}/operator-missions`, body),
+  update: (roomId: number, id: number, body: OperatorMissionInput) => put<OperatorMission>(`/rooms/${roomId}/operator-missions/${id}`, body),
+  cancel: (roomId: number, id: number) => post<OperatorMission>(`/rooms/${roomId}/operator-missions/${id}/cancel`),
+  delete: (roomId: number, id: number) => del<OperatorMission>(`/rooms/${roomId}/operator-missions/${id}`),
 }
 
 // ===== 유저 (#193) =====

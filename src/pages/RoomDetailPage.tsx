@@ -7,6 +7,7 @@ import { PageHeader } from '../layout/AdminLayout'
 import { useRoom } from '../api/queries'
 import { RoomStatusTag } from '../components/StatusTag'
 import type { RoomMember } from '../api/types'
+import { OperatorMissionPanel } from '../components/OperatorMissionPanel'
 
 const memberColumns = (nav: (uid: number) => void): ColumnsType<RoomMember> => [
   { title: '유저 ID', dataIndex: 'user_id', width: 90, render: (v: number) => <a onClick={() => nav(v)}>{v}</a> },
@@ -62,6 +63,7 @@ export default function RoomDetailPage() {
                 </Descriptions.Item>
               </Descriptions>
             </Card>
+            <OperatorMissionPanel room={data} />
             <Card title={`참여자 (${data.members.length})`}>
               <Table<RoomMember>
                 rowKey="member_id"
