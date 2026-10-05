@@ -40,7 +40,7 @@ git diff origin/develop...HEAD --name-only
 
 ### Step 4. 커밋 (미커밋 변경이 있으면)
 
-커밋 메시지 형식: `[#{번호}]; {tag}: {설명}` + Claude 공동 작성 표기.
+커밋 메시지 형식: `[#{번호}]; {tag}: {설명}` (AI 공동 작성 표기 없이).
 
 ### Step 5. PR 제목·본문
 
