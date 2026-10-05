@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { adminsApi, dashboardApi, demoApi, iapApi, missionsApi, roomsApi, usersApi } from './endpoints'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { adminsApi, dashboardApi, demoApi, iapApi, missionsApi, operatorMissionsApi, roomsApi, usersApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
@@ -30,6 +30,13 @@ export const useRooms = (q: RoomListQuery) =>
 
 export const useRoom = (roomId: number) =>
   useQuery({ queryKey: ['room', roomId], queryFn: () => roomsApi.detail(roomId), enabled: !!roomId })
+
+export const useOperatorMissions = (roomId: number, enabled: boolean) =>
+  useInfiniteQuery({
+    queryKey: ['operator-missions', roomId], initialPageParam: undefined as number | undefined,
+    queryFn: ({ pageParam }) => operatorMissionsApi.list(roomId, pageParam),
+    getNextPageParam: (page) => page.next_cursor ?? undefined, enabled: enabled && roomId > 0, refetchInterval: 2000,
+  })
 
 export const useRoomActivities = (roomId: number, q: RoomActivityQuery) =>
   useQuery({ queryKey: ['room', roomId, 'activities', q], queryFn: () => roomsApi.activities(roomId, q), enabled: roomId > 0 })

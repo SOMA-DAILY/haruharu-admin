@@ -29,6 +29,7 @@ import type { RoomMember, RoomInvite, Gender } from '../api/types'
 import RoomActivityPanel from '../components/RoomActivityPanel'
 import RoomSelectionPanel from '../components/RoomSelectionPanel'
 import RoomScheduleCard from '../components/RoomScheduleCard'
+import { OperatorMissionPanel } from '../components/OperatorMissionPanel'
 
 const fmt = (d: Dayjs) => d.format('YYYY-MM-DDTHH:mm:ss')
 
@@ -242,7 +243,7 @@ export default function RoomDetailPage() {
                 </Descriptions.Item>
               </Descriptions>
             </Card>
-
+            <OperatorMissionPanel room={data} />
             <Card title={`참여자 (${data.members.length})`}>
               <Table<RoomMember>
                 rowKey="member_id"

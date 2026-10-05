@@ -185,6 +185,23 @@ export interface RoomDetail {
   members: RoomMember[]
 }
 
+export type OperatorMissionStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELLED'
+export interface OperatorMissionTemplate { template_id: string; day_number: number; position: number; content: string; category: string }
+export interface MissionImage { id: number; url: string; width: number; height: number }
+export interface OperatorMission {
+  id: number; room_id: number; template_id: string; content: string; notify_participants: boolean; image_id: number | null; image: MissionImage | null
+  scheduled_at: string; immediate: boolean; status: OperatorMissionStatus; request_key: string
+  message_id: number | null; sent_at: string | null; fail_reason: string | null
+  delete_requested_at: string | null; delete_processed_at: string | null
+}
+export interface OperatorMissionPage {
+  room_id: number; room_status: RoomStatus; starts_at: string | null
+  final_selection_opens_at: string | null; server_now: string
+  templates: OperatorMissionTemplate[]; items: OperatorMission[]; next_cursor: number | null
+}
+export interface OperatorMissionInput {
+  request_key: string; template_id: string; content: string; notify_participants: boolean; scheduled_at: string | null; image_id?: number | null
+}
 export type RoomActivityType = 'VIDEO' | 'CHAT' | 'REACTION' | 'QUESTION'
 export interface ActivityParticipant { user_id: number; name: string }
 export interface RoomSelection {
@@ -246,8 +263,7 @@ export interface CreateRoomBody {
   total_days: number
   max_uses?: number | null
   invite_expires_at?: string | null
-  mission_enabled: boolean // BE #450: 방 단위 미션 on/off (필수)
-  mission_slots?: RoomMissionSlot[] // 켜짐이면 total_days×2개, 꺼짐이면 생략
+  mission_enabled: boolean // BE #450 필수였음. #474 부터 새 방 자동 미션이 없어 항상 false
   chat_schedule?: ScheduleItemBody[]
 }
 export interface RoomCreated {

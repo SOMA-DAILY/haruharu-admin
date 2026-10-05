@@ -8,6 +8,7 @@ import type {
   Role,
   AdminAccountStatus,
   ScheduleStatus,
+  OperatorMission,
 } from '../api/types'
 
 const ROOM_MAP: Record<RoomStatus, { color: string; label: string }> = {
@@ -22,6 +23,12 @@ const INVITE_MAP: Record<RoomInviteStatus, { color: string; label: string }> = {
   ACTIVE: { color: 'green', label: '유효' },
   DISABLED: { color: 'default', label: '비활성' },
   EXPIRED: { color: 'red', label: '만료' },
+}
+
+export function OperatorMissionStatusTag({ item }: { item: OperatorMission }) {
+  const statuses = { SCHEDULED: ['blue', '예약됨'], SENDING: ['processing', '발송 중'], SENT: ['green', '발송 완료'], FAILED: ['red', '발송 실패'], CANCELLED: ['default', '취소됨'] } as const
+  const [color, label] = statuses[item.status]
+  return <Tag color={item.delete_requested_at ? 'default' : color}>{item.delete_processed_at ? '삭제됨' : item.delete_requested_at ? '삭제 중' : label}</Tag>
 }
 
 const USER_MAP: Record<UserStatus, { color: string; label: string }> = {
