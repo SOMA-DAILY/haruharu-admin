@@ -80,7 +80,7 @@ TO-BE:
 
 ### Step 4. GitHub 이슈 생성
 
-라벨 매핑: `feat`→`Feature`, `fix`→`Hotfix`, `chore/refactor`→`Refactor`.
+라벨 매핑: `feat`→`feature`, `fix`→`bug`, `chore/refactor`→`task`.
 라벨이 없으면(`gh label list`) 생성하거나 라벨 없이 진행.
 
 ```bash

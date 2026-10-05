@@ -1,12 +1,23 @@
 import { useState } from 'react'
-import { Card, Table, Select, DatePicker, Space } from 'antd'
+import { Card, Table, Select, DatePicker, Space, Button } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
 import { useRooms } from '../api/queries'
+import { useAuth } from '../auth/AuthContext'
 import { RoomStatusTag } from '../components/StatusTag'
+import CreateRoomModal from '../components/CreateRoomModal'
 import type { RoomListItem, RoomStatus } from '../api/types'
+
+const STATUS_OPTIONS = [
+  { value: 'PENDING', label: '대기' },
+  { value: 'ACTIVE', label: '진행중' },
+  { value: 'SELECTING', label: '선택중' },
+  { value: 'ENDED', label: '종료' },
+  { value: 'CANCELLED', label: '취소' },
+]
 
 const columns: ColumnsType<RoomListItem> = [
   { title: '방 ID', dataIndex: 'room_id', width: 90 },
@@ -32,10 +43,13 @@ const columns: ColumnsType<RoomListItem> = [
 
 export default function SessionsPage() {
   const navigate = useNavigate()
+  const { me } = useAuth()
+  const canWrite = me?.role === 'SUPER' || me?.role === 'OPERATOR'
   const [status, setStatus] = useState<RoomStatus>()
   const [date, setDate] = useState<Dayjs | null>(null)
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const { data, isLoading } = useRooms({
     status,
@@ -46,7 +60,18 @@ export default function SessionsPage() {
 
   return (
     <>
-      <PageHeader title="세션(방) 관리" subtitle="진행 중인 소개팅 방을 조회합니다" />
+      <PageHeader
+        title="세션(방) 관리"
+        subtitle="소개팅 방 조회 · 생성"
+        extra={
+          canWrite && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+              방 생성
+            </Button>
+          )
+        }
+      />
+      <CreateRoomModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <Card>
         <Space style={{ marginBottom: 16 }}>
           <Select
@@ -58,11 +83,7 @@ export default function SessionsPage() {
               setStatus(v)
               setPage(0)
             }}
-            options={[
-              { value: 'PENDING', label: '대기' },
-              { value: 'ACTIVE', label: '진행중' },
-              { value: 'ENDED', label: '종료' },
-            ]}
+            options={STATUS_OPTIONS}
           />
           <DatePicker
             placeholder="예정일"
