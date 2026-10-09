@@ -1,20 +1,21 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { adminsApi, dashboardApi, demoApi, iapApi, missionsApi, operatorMissionsApi, roomsApi, usersApi } from './endpoints'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
-  MissionListQuery,
   RoomListQuery,
   RoomActivityQuery,
   UserListQuery,
 } from './endpoints'
 import type {
+  AnnouncementBody,
   AssignGenderBody,
   CreateAdminAccountBody,
   CreateRoomBody,
-  MissionRevisionBody,
+  MissionAnnouncement,
   ReissueInviteBody,
-  ScheduleItemBody,
+  RoomMission,
+  RoomMissionBody,
   SetDemoCodeBody,
   UpdateAdminAccountBody,
 } from './types'
@@ -30,13 +31,6 @@ export const useRooms = (q: RoomListQuery) =>
 
 export const useRoom = (roomId: number) =>
   useQuery({ queryKey: ['room', roomId], queryFn: () => roomsApi.detail(roomId), enabled: !!roomId })
-
-export const useOperatorMissions = (roomId: number, enabled: boolean) =>
-  useInfiniteQuery({
-    queryKey: ['operator-missions', roomId], initialPageParam: undefined as number | undefined,
-    queryFn: ({ pageParam }) => operatorMissionsApi.list(roomId, pageParam),
-    getNextPageParam: (page) => page.next_cursor ?? undefined, enabled: enabled && roomId > 0, refetchInterval: 2000,
-  })
 
 export const useRoomActivities = (roomId: number, q: RoomActivityQuery) =>
   useQuery({ queryKey: ['room', roomId, 'activities', q], queryFn: () => roomsApi.activities(roomId, q), enabled: roomId > 0 })
@@ -86,36 +80,89 @@ export const useAssignGender = (roomId: number) => {
   })
 }
 
-// ===== 방 편성 (채팅 P0) =====
-// 예약/발송중 행이 있을 때만 15초 폴링 (상태는 app 1분 잡이 바꿈)
-export const useRoomSchedule = (roomId: number) =>
+// ===== 방 미션·안내 =====
+export interface RoomMissionRow {
+  mission: RoomMission
+  announcements: MissionAnnouncement[]
+}
+const PAGE = 100
+// 커서(next_cursor)가 끝날 때까지 이어 받는다
+async function fetchRoomMissions(roomId: number): Promise<RoomMissionRow[]> {
+  const missions: RoomMission[] = []
+  for (let after: number | undefined; ; ) {
+    const page = await roomMissionsApi.list(roomId, { after, size: PAGE })
+    missions.push(...page.missions)
+    if (page.next_cursor == null) break
+    after = page.next_cursor
+  }
+  return Promise.all(
+    missions.map(async (mission) => {
+      const announcements: MissionAnnouncement[] = []
+      for (let after: number | undefined; ; ) {
+        const page = await roomMissionsApi.announcements(roomId, mission.mission_id, { after, size: PAGE })
+        announcements.push(...page.announcements)
+        if (page.next_cursor == null) break
+        after = page.next_cursor
+      }
+      return { mission, announcements }
+    }),
+  )
+}
+// 예약 미션이나 예약/발송중 안내가 있을 때만 15초 폴링 (상태는 app 1분 잡이 바꿈)
+export const useRoomMissions = (roomId: number) =>
   useQuery({
-    queryKey: ['room-schedule', roomId],
-    queryFn: () => roomsApi.schedule(roomId),
+    queryKey: ['room-missions', roomId],
+    queryFn: () => fetchRoomMissions(roomId),
     enabled: roomId > 0,
     refetchInterval: (query) =>
-      query.state.data?.some((r) => r.status === 'SCHEDULED' || r.status === 'SENDING') ? 15000 : false,
+      query.state.data?.some(
+        (r) =>
+          r.mission.status === 'SCHEDULED' ||
+          r.announcements.some((a) => a.status === 'SCHEDULED' || a.status === 'SENDING'),
+      )
+        ? 15000
+        : false,
   })
 
-const useScheduleMutation = <V,>(roomId: number, fn: (v: V) => Promise<unknown>) => {
+const useMissionMutation = <V,>(roomId: number, fn: (v: V) => Promise<unknown>) => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['room-schedule', roomId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['room-missions', roomId] }),
   })
 }
-export const useCreateScheduleItem = (roomId: number) =>
-  useScheduleMutation(roomId, (body: ScheduleItemBody) => roomsApi.createScheduleItem(roomId, body))
-export const useUpdateScheduleItem = (roomId: number) =>
-  useScheduleMutation(roomId, ({ itemId, body }: { itemId: number; body: ScheduleItemBody }) =>
-    roomsApi.updateScheduleItem(roomId, itemId, body),
+export const useCreateMission = (roomId: number) =>
+  useMissionMutation(roomId, (body: RoomMissionBody) => roomMissionsApi.create(roomId, body))
+export const useUpdateMission = (roomId: number) =>
+  useMissionMutation(roomId, ({ missionId, body }: { missionId: number; body: RoomMissionBody }) =>
+    roomMissionsApi.update(roomId, missionId, body),
   )
-export const useSendScheduleNow = (roomId: number) =>
-  useScheduleMutation(roomId, (itemId: number) => roomsApi.sendScheduleNow(roomId, itemId))
-export const useCancelScheduleItem = (roomId: number) =>
-  useScheduleMutation(roomId, (itemId: number) => roomsApi.cancelScheduleItem(roomId, itemId))
-export const useDeleteScheduleMessage = (roomId: number) =>
-  useScheduleMutation(roomId, (itemId: number) => roomsApi.deleteScheduleMessage(roomId, itemId))
+export const useCancelMission = (roomId: number) =>
+  useMissionMutation(roomId, (missionId: number) => roomMissionsApi.cancel(roomId, missionId))
+
+type AnnouncementRef = { missionId: number; id: number }
+export const useCreateAnnouncement = (roomId: number) =>
+  useMissionMutation(roomId, ({ missionId, body }: { missionId: number; body: AnnouncementBody }) =>
+    roomMissionsApi.createAnnouncement(roomId, missionId, body),
+  )
+export const useUpdateAnnouncement = (roomId: number) =>
+  useMissionMutation(roomId, ({ missionId, id, body }: AnnouncementRef & { body: AnnouncementBody }) =>
+    roomMissionsApi.updateAnnouncement(roomId, missionId, id, body),
+  )
+export const useSendAnnouncementNow = (roomId: number) =>
+  useMissionMutation(roomId, ({ missionId, id }: AnnouncementRef) =>
+    roomMissionsApi.sendAnnouncementNow(roomId, missionId, id),
+  )
+export const useCancelAnnouncement = (roomId: number) =>
+  useMissionMutation(roomId, ({ missionId, id }: AnnouncementRef) =>
+    roomMissionsApi.cancelAnnouncement(roomId, missionId, id),
+  )
+export const useDeleteAnnouncementMessage = (roomId: number) =>
+  useMissionMutation(roomId, ({ missionId, id }: AnnouncementRef) =>
+    roomMissionsApi.deleteAnnouncementMessage(roomId, missionId, id),
+  )
+
+export const useUploadMissionImage = () => useMutation({ mutationFn: (file: File) => missionImagesApi.upload(file) })
 
 export const useUsers = (q: UserListQuery) =>
   useQuery({ queryKey: ['users', q], queryFn: () => usersApi.list(q) })
@@ -146,42 +193,6 @@ export const useUpdateAdminAccount = () => {
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: UpdateAdminAccountBody }) => adminsApi.update(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admins'] }),
-  })
-}
-
-// ===== 미션 카탈로그 (revision 모델) =====
-export const useMissions = (q: MissionListQuery, enabled = true) =>
-  useQuery({ queryKey: ['missions', q], queryFn: () => missionsApi.list(q), enabled })
-
-export const useMissionRevisions = (id: number, q: MissionListQuery, enabled = true) =>
-  useQuery({
-    queryKey: ['mission', id, 'revisions', q],
-    queryFn: () => missionsApi.revisions(id, q),
-    enabled: !!id && enabled,
-  })
-
-export const useCreateMission = () => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (body: MissionRevisionBody) => missionsApi.create(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['missions'] }),
-  })
-}
-export const usePublishRevision = (id: number) => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (body: MissionRevisionBody) => missionsApi.publishRevision(id, body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['missions'] })
-      qc.invalidateQueries({ queryKey: ['mission', id, 'revisions'] })
-    },
-  })
-}
-export const useChangeMissionStatus = () => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, active }: { id: number; active: boolean }) => missionsApi.changeStatus(id, active),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['missions'] }),
   })
 }
 

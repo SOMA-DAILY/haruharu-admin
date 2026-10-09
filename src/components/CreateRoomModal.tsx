@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Dayjs } from 'dayjs'
 import { useCreateRoom } from '../api/queries'
 import { ApiError } from '../api/client'
-import type { RevealField, ScheduleItemBody } from '../api/types'
+import type { RevealField, RoomMissionBody } from '../api/types'
 import {
   CHAT_SCHEDULE_DEFAULTS,
   DEFAULT_PUSH_BODY,
@@ -312,14 +312,27 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
       message.warning('채팅 편성을 확인하세요.')
       return
     }
-    const chat_schedule: ScheduleItemBody[] = scheduleRows.map((r) => ({
-      run_at: fmt(r.run_at!),
-      reveal_fields: r.reveal_fields,
-      message_content: r.message_content.trim() ? r.message_content : null,
-      push: r.push,
-      push_title: r.push && r.push_title.trim() ? r.push_title : null,
-      push_body: r.push && r.push_body.trim() ? r.push_body : null,
-    }))
+    // 한 줄 = 미션 하나 + START 안내 하나. 공개 항목이 있으면 PROFILE_REVEAL (글은 안내에만), 없으면 ANNOUNCEMENT
+    const missions: RoomMissionBody[] = scheduleRows.map((r) => {
+      const at = fmt(r.run_at!)
+      const content = r.message_content.trim() ? r.message_content : null
+      const reveal = r.reveal_fields.length > 0
+      return {
+        type: reveal ? 'PROFILE_REVEAL' : 'ANNOUNCEMENT',
+        details: reveal ? { reveal_fields: r.reveal_fields } : { content },
+        image_key: null,
+        opens_at: at,
+        closes_at: null,
+        announcement: {
+          announcement_type: 'START',
+          run_at: at,
+          content,
+          push: r.push,
+          push_title: r.push && r.push_title.trim() ? r.push_title : null,
+          push_body: r.push && r.push_body.trim() ? r.push_body : null,
+        },
+      }
+    })
     try {
       const res = await createMut.mutateAsync({
         starts_at: fmt(v.starts_at),
@@ -330,17 +343,15 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
         total_days: v.total_days,
         max_uses: v.max_uses ?? null,
         invite_expires_at: v.invite_expires_at ? fmt(v.invite_expires_at) : null,
-        // 새 방은 운영자 미션 패널로 직접 발송한다(BE #474). develop BE 는 이 값이 필수라 false 로 보낸다
-        mission_enabled: false,
-        chat_schedule,
+        missions,
       })
       setCreated(res)
     } catch (e) {
-      // 400 이 chat_schedule[i].xxx 칸으로 오면 그 줄 아래에 표시
+      // 400 이 missions[i].xxx 칸으로 오면 그 줄 아래에 표시
       const rowErrors = new Map<number, string>()
       if (e instanceof ApiError && e.status === 400 && e.fieldErrors) {
         for (const [field, msg] of Object.entries(e.fieldErrors)) {
-          const m = /^chat_schedule\[(\d+)\]/.exec(field)
+          const m = /^missions\[(\d+)\]/.exec(field)
           if (m && Number(m[1]) < scheduleRows.length && !rowErrors.has(Number(m[1]))) rowErrors.set(Number(m[1]), msg)
         }
       }
