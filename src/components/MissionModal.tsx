@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import {
   Alert,
   App,
@@ -7,18 +7,14 @@ import {
   DatePicker,
   Divider,
   Form,
-  Image,
   Input,
   Modal,
   Radio,
   Select,
   Space,
-  Typography,
-  Upload,
 } from 'antd'
-import { DeleteOutlined, UploadOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
-import { useCreateMission, useUpdateMission, useUploadMissionImage } from '../api/queries'
+import { useCreateMission, useUpdateMission } from '../api/queries'
 import { ApiError } from '../api/client'
 import type { MissionImage, MissionType, RevealField, RoomDetail, RoomMission, RoomMissionBody } from '../api/types'
 import {
@@ -33,11 +29,10 @@ import {
   REVEAL_LABEL,
 } from '../config/chatScheduleDefaults'
 import ChatBubblePreview from './ChatBubblePreview'
+import MissionImagePicker from './MissionImagePicker'
 import { useMissionActions } from './useMissionActions'
 
 const fmt = (d: Dayjs) => d.format('YYYY-MM-DDTHH:mm:ss')
-const IMAGE_MAX_BYTES = 10 * 1024 * 1024
-const IMAGE_HINT = 'JPG·PNG 사진을 10MB 이하로 선택해 주세요.'
 
 type Mode = 'SCHEDULED' | 'NOW'
 type Values = {
@@ -81,62 +76,6 @@ const fieldOf = (path: string, type: MissionType): keyof Values | undefined => {
     default:
       return undefined
   }
-}
-
-// 사진을 먼저 올리고(POST /mission-images) 받은 key 를 미션에 붙인다
-function MissionImagePicker({
-  value,
-  onChange,
-  disabled,
-}: {
-  value?: MissionImage | null
-  onChange?: (v: MissionImage | null) => void
-  disabled?: boolean
-}) {
-  const uploadMut = useUploadMissionImage()
-  const [error, setError] = useState<string>()
-
-  const upload = async (file: File) => {
-    setError(undefined)
-    if (!['image/jpeg', 'image/png'].includes(file.type) || file.size === 0 || file.size > IMAGE_MAX_BYTES) {
-      setError(IMAGE_HINT)
-      return
-    }
-    try {
-      onChange?.(await uploadMut.mutateAsync(file))
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : '사진을 올리지 못했어요.')
-    }
-  }
-
-  return (
-    <Space orientation="vertical" size={6}>
-      {value && <Image src={value.url} alt="미션 사진" width={120} style={{ borderRadius: 8 }} />}
-      {!disabled && (
-        <Space>
-          <Upload
-            accept="image/jpeg,image/png"
-            showUploadList={false}
-            beforeUpload={(file) => {
-              void upload(file)
-              return false
-            }}
-          >
-            <Button icon={<UploadOutlined />} loading={uploadMut.isPending}>
-              {value ? '사진 바꾸기' : '사진 첨부'}
-            </Button>
-          </Upload>
-          {value && (
-            <Button icon={<DeleteOutlined />} onClick={() => onChange?.(null)}>
-              사진 떼기
-            </Button>
-          )}
-        </Space>
-      )}
-      {!value && disabled && <Typography.Text type="secondary">없음</Typography.Text>}
-      {error && <Typography.Text type="danger">{error}</Typography.Text>}
-    </Space>
-  )
 }
 
 export default function MissionModal({
