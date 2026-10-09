@@ -22,7 +22,8 @@ import { useNavigate } from 'react-router-dom'
 import type { Dayjs } from 'dayjs'
 import { useCreateRoom } from '../api/queries'
 import { ApiError } from '../api/client'
-import type { RevealField, RoomMissionBody } from '../api/types'
+import type { MissionImage, RevealField, RoomMissionBody } from '../api/types'
+import MissionImagePicker from './MissionImagePicker'
 import {
   CHAT_SCHEDULE_DEFAULTS,
   DEFAULT_PUSH_BODY,
@@ -59,6 +60,8 @@ type ScheduleRow = {
   run_at?: Dayjs
   reveal_fields: RevealField[]
   message_content: string
+  image: MissionImage | null // 먼저 올린 미션 사진 (선택)
+  uploading?: boolean
   push: boolean
   push_title: string
   push_body: string
@@ -74,6 +77,7 @@ const defaultRows = (start?: Dayjs | null, final?: Dayjs | null): ScheduleRow[] 
     run_at: resolveRunAt(d.rule, start, final),
     reveal_fields: [...d.reveal_fields],
     message_content: d.message_content,
+    image: null,
     push: d.push,
     push_title: d.push_title ?? '',
     push_body: d.push_body ?? '',
@@ -114,6 +118,7 @@ function ChatScheduleSection({
         run_at: undefined,
         reveal_fields: [],
         message_content: '',
+        image: null,
         push: false,
         push_title: '',
         push_body: '',
@@ -240,6 +245,14 @@ function ChatScheduleSection({
                     onChange={(e) => update(r.uid, { message_content: e.target.value })}
                     style={{ marginBottom: 20 }}
                   />
+                  <div style={{ marginBottom: r.push ? 8 : 0 }}>
+                    <MissionImagePicker
+                      compact
+                      value={r.image}
+                      onChange={(image) => update(r.uid, { image })}
+                      onUploadingChange={(uploading) => update(r.uid, { uploading })}
+                    />
+                  </div>
                   {r.push && (
                     <div style={{ display: 'grid', gap: 6 }}>
                       <Input
@@ -286,6 +299,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
   const startsAt: Dayjs | undefined = AntForm.useWatch('starts_at', form)
   const finalOpensAt: Dayjs | undefined = AntForm.useWatch('final_selection_opens_at', form)
   const [scheduleRows, setScheduleRows] = useState<ScheduleRow[]>(() => defaultRows())
+  const uploadingPhoto = scheduleRows.some((r) => r.uploading)
   const onValuesChange = (changed: Partial<FormValues>, all: FormValues) => {
     if (!('starts_at' in changed || 'final_selection_opens_at' in changed)) return
     setScheduleRows((prev) =>
@@ -312,6 +326,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
       message.warning('채팅 편성을 확인하세요.')
       return
     }
+    if (uploadingPhoto) return
     // 한 줄 = 미션 하나 + START 안내 하나. 공개 항목이 있으면 PROFILE_REVEAL (글은 안내에만), 없으면 ANNOUNCEMENT
     const missions: RoomMissionBody[] = scheduleRows.map((r) => {
       const at = fmt(r.run_at!)
@@ -320,7 +335,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
       return {
         type: reveal ? 'PROFILE_REVEAL' : 'ANNOUNCEMENT',
         details: reveal ? { reveal_fields: r.reveal_fields } : { content },
-        image_key: null,
+        image_key: r.image?.key ?? null,
         opens_at: at,
         closes_at: null,
         announcement: {
@@ -384,7 +399,14 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
               <Button key="cancel" onClick={close}>
                 취소
               </Button>,
-              <Button key="ok" type="primary" loading={createMut.isPending} onClick={() => form.submit()}>
+              // 사진을 올리는 중에 만들면 그 줄 사진이 빠지므로 막는다
+              <Button
+                key="ok"
+                type="primary"
+                loading={createMut.isPending}
+                disabled={uploadingPhoto}
+                onClick={() => form.submit()}
+              >
                 생성
               </Button>,
             ]
