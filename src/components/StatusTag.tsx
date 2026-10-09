@@ -7,9 +7,12 @@ import type {
   IapStore,
   Role,
   AdminAccountStatus,
-  ScheduleStatus,
-  OperatorMission,
+  AnnouncementStatus,
+  AnnouncementType,
+  MissionStatus,
+  MissionType,
 } from '../api/types'
+import { ANNOUNCEMENT_TYPE_LABEL, MISSION_TYPE_LABEL } from '../config/chatScheduleDefaults'
 
 const ROOM_MAP: Record<RoomStatus, { color: string; label: string }> = {
   PENDING: { color: 'gold', label: '대기' },
@@ -23,12 +26,6 @@ const INVITE_MAP: Record<RoomInviteStatus, { color: string; label: string }> = {
   ACTIVE: { color: 'green', label: '유효' },
   DISABLED: { color: 'default', label: '비활성' },
   EXPIRED: { color: 'red', label: '만료' },
-}
-
-export function OperatorMissionStatusTag({ item }: { item: OperatorMission }) {
-  const statuses = { SCHEDULED: ['blue', '예약됨'], SENDING: ['processing', '발송 중'], SENT: ['green', '발송 완료'], FAILED: ['red', '발송 실패'], CANCELLED: ['default', '취소됨'] } as const
-  const [color, label] = statuses[item.status]
-  return <Tag color={item.delete_requested_at ? 'default' : color}>{item.delete_processed_at ? '삭제됨' : item.delete_requested_at ? '삭제 중' : label}</Tag>
 }
 
 const USER_MAP: Record<UserStatus, { color: string; label: string }> = {
@@ -74,15 +71,34 @@ export function AdminStatusTag({ status }: { status: AdminAccountStatus }) {
   return status === 'ACTIVE' ? <Tag color="green">활성</Tag> : <Tag color="default">비활성</Tag>
 }
 
-const SCHEDULE_MAP: Record<ScheduleStatus, { color: string; label: string }> = {
+const MISSION_MAP: Record<MissionStatus, { color: string; label: string }> = {
+  SCHEDULED: { color: 'blue', label: '예정' },
+  OPEN: { color: 'green', label: '진행중' },
+  CLOSED: { color: 'default', label: '마감' },
+  CANCELED: { color: 'default', label: '취소' },
+}
+export function MissionStatusTag({ status }: { status: MissionStatus }) {
+  const m = MISSION_MAP[status]
+  return <Tag color={m.color}>{m.label}</Tag>
+}
+
+const ANNOUNCEMENT_MAP: Record<AnnouncementStatus, { color: string; label: string }> = {
   SCHEDULED: { color: 'blue', label: '예약' },
   SENDING: { color: 'processing', label: '발송중' },
   SENT: { color: 'green', label: '보냄' },
   CANCELED: { color: 'default', label: '취소' },
   FAILED: { color: 'red', label: '실패' },
 }
-export function ScheduleStatusTag({ status, failReason }: { status: ScheduleStatus; failReason?: string | null }) {
-  const m = SCHEDULE_MAP[status]
+export function AnnouncementStatusTag({ status, failReason }: { status: AnnouncementStatus; failReason?: string | null }) {
+  const m = ANNOUNCEMENT_MAP[status]
   const tag = <Tag color={m.color}>{m.label}</Tag>
   return status === 'FAILED' && failReason ? <Tooltip title={failReason}>{tag}</Tooltip> : tag
+}
+
+export function MissionTypeTag({ type }: { type: MissionType }) {
+  // 모르는 유형이 와도 죽지 않게 원문 표시
+  return <Tag color={type === 'PROFILE_REVEAL' ? 'gold' : 'blue'}>{MISSION_TYPE_LABEL[type] ?? type}</Tag>
+}
+export function AnnouncementTypeTag({ type }: { type: AnnouncementType }) {
+  return <Tag>{ANNOUNCEMENT_TYPE_LABEL[type] ?? type}</Tag>
 }

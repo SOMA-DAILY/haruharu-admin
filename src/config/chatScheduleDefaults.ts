@@ -1,8 +1,8 @@
 import type { Dayjs } from 'dayjs'
-import type { RevealField } from '../api/types'
+import type { AnnouncementType, MissionType, RevealField } from '../api/types'
 
 // 채팅 P0 기본 편성 (채팅 P0 기능명세 §F3). 서버엔 기본값 없음.
-// 방 생성 모달 [채팅 편성] 에 채워져 뜨고, 고친 채로 POST /rooms 의 chat_schedule[] 로 감.
+// 방 생성 모달 [채팅 편성] 에 채워져 뜨고, 고친 채로 POST /rooms 의 missions[] 로 감 (한 줄 = 미션 하나 + START 안내 하나).
 
 export const REVEAL_FIELDS: RevealField[] = ['MBTI', 'INTO_NOW', 'AGE', 'DEPARTMENT']
 export const REVEAL_LABEL: Record<RevealField, string> = {
@@ -11,6 +11,11 @@ export const REVEAL_LABEL: Record<RevealField, string> = {
   AGE: '나이',
   DEPARTMENT: '학과',
 }
+
+export const MISSION_TYPES: MissionType[] = ['ANNOUNCEMENT', 'PROFILE_REVEAL']
+export const MISSION_TYPE_LABEL: Record<MissionType, string> = { ANNOUNCEMENT: '안내', PROFILE_REVEAL: '프로필 공개' }
+export const ANNOUNCEMENT_TYPES: AnnouncementType[] = ['START', 'REMINDER', 'RESULT']
+export const ANNOUNCEMENT_TYPE_LABEL: Record<AnnouncementType, string> = { START: '시작', REMINDER: '리마인드', RESULT: '결과' }
 
 // 푸시를 켰을 때 채워 넣는 기본 문구
 export const DEFAULT_PUSH_TITLE = '📢 하루 공지'
