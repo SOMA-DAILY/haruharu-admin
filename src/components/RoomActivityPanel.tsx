@@ -10,6 +10,7 @@ import './RoomActivityPanel.css'
 
 const { Text, Title } = Typography
 const labels: Record<RoomActivityType, string> = { VIDEO: '영상', CHAT: '채팅', REACTION: '반응', QUESTION: '익명질문' }
+const replyLabels: Record<string, string> = { MESSAGE: '답장', VIDEO: '영상 답장' }
 const emoji: Record<string, string> = { LIKE: '👍', HEART: '❤️', LOVE: '😍', LAUGH: '😂', WOW: '😮', FIRE: '🔥' }
 const icons = { VIDEO: <VideoCameraOutlined />, CHAT: <MessageOutlined />, REACTION: <HeartOutlined />, QUESTION: <QuestionCircleOutlined /> }
 
@@ -73,7 +74,7 @@ function EventCard({ event, onVideo }: { event: RoomActivity; onVideo: (v: Activ
       <Avatar className="activity-avatar" icon={icons[event.type]} />
       <div className="activity-event-body">
         <div className="activity-event-heading">
-          <Space wrap size={6}><Text strong>{actor}</Text>{event.target && <><Text type="secondary">→</Text><Text strong>{event.target.name}</Text></>}<Tag>{labels[event.type]}</Tag></Space>
+          <Space wrap size={6}><Text strong>{actor}</Text>{event.target && <><Text type="secondary">→</Text><Text strong>{event.target.name}</Text></>}<Tag>{labels[event.type]}</Tag>{event.reply_type && replyLabels[event.reply_type] && <Tag color="blue">{replyLabels[event.reply_type]}</Tag>}</Space>
           <Text type="secondary" className="activity-time">{dayjs(event.occurred_at).format('MM.DD HH:mm:ss')}</Text>
         </div>
         {event.type === 'VIDEO' && event.video && <div className="activity-inline-video">
