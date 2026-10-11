@@ -1,5 +1,5 @@
-import { useState, type CSSProperties } from 'react'
-import { Alert, Avatar, Button, Card, Collapse, Empty, Modal, Pagination, Segmented, Select, Skeleton, Space, Table, Tag, Typography, theme } from 'antd'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Alert, Avatar, Button, Card, Collapse, Empty, Modal, Segmented, Select, Skeleton, Space, Table, Tag, Typography, theme } from 'antd'
 import { HeartOutlined, MessageOutlined, PlayCircleOutlined, QuestionCircleOutlined, ReloadOutlined, VideoCameraOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
@@ -45,7 +45,7 @@ function VideoSlots({ items, onVideo, order }: { items: RoomActivity[]; onVideo:
     slots.set(key, [...(slots.get(key) ?? []), event])
   })
   return <div className="activity-slot-board">{[...slots].sort(([a], [b]) => order === 'asc' ? a.localeCompare(b) : b.localeCompare(a)).map(([slot, videos]) => <section className="activity-slot" key={slot}>
-    <div className="activity-day-heading"><Text strong>{slot === 'unknown' ? '슬롯 정보 없음' : `${dayjs(slot).format('MM.DD HH:mm')}–${dayjs(slot).add(1, 'hour').format('HH:mm')}`}</Text><Text type="secondary">이 페이지 {videos.length}개</Text></div>
+    <div className="activity-day-heading"><Text strong>{slot === 'unknown' ? '슬롯 정보 없음' : `${dayjs(slot).format('MM.DD HH:mm')}–${dayjs(slot).add(1, 'hour').format('HH:mm')}`}</Text><Text type="secondary">{videos.length}개</Text></div>
     <div className="activity-video-grid">{videos.map(event => event.video && <article className="activity-video-card" key={event.id}>
       <VideoThumbnail key={event.video.thumbnail_url} video={event.video} onOpen={() => onVideo(event.video!)} />
       <div className="activity-video-meta"><Text strong>{event.actor?.name ?? '가명 없음'}{event.actor && ` (#${event.actor.user_id})`}</Text><Text ellipsis>{event.video.caption || '설명 없는 영상'}</Text></div>
@@ -97,12 +97,30 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
   const [day, setDay] = useState<number>()
   const [userId, setUserId] = useState<number>()
   const [type, setType] = useState<RoomActivityType>()
-  const [page, setPage] = useState(0)
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
   const [video, setVideo] = useState<ActivityVideo | null>(null)
   const summary = useRoomActivitySummary(room.room_id, { day, userId })
   const pageSize = type === 'VIDEO' ? 100 : 24
-  const events = useRoomActivities(room.room_id, { day, userId, type, page, size: pageSize, order })
+  const events = useRoomActivities(room.room_id, { day, userId, type, size: pageSize, order })
+  // 이어 불러오는 사이 새 활동이 생기면 같은 항목이 다음 묶음에 또 올 수 있어 걸러낸다
+  const seen = new Set<string>()
+  const loaded = (events.data?.pages ?? []).flatMap(p => p.content).filter(event => {
+    const key = `${event.type}-${event.id}`
+    return seen.has(key) ? false : (seen.add(key), true)
+  })
+  const total = events.data?.pages[0]?.page.total_elements ?? 0
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = events
+  // 목록은 자체 스크롤 칸 안에서만 이어 붙는다 (아래 선택표·초대코드가 밀려 내려가지 않게).
+  // 칸의 끝이 보이면 다음 묶음을 불러온다. 실패한 뒤에는 [다시 시도]를 눌러야 다시 요청한다
+  const scroller = useRef<HTMLDivElement>(null)
+  const sentinel = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const node = sentinel.current
+    if (!node || !hasNextPage || isFetchingNextPage || isFetchNextPageError) return
+    const observer = new IntersectionObserver(entries => { if (entries[0].isIntersecting) void fetchNextPage() }, { root: scroller.current, rootMargin: '300px' })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage, loaded.length])
   const counts = summary.data?.counts
   const uploadDays = Array.from({ length: room.total_days }, (_, i) => i + 1)
   const dailyUploads = useQueries({ queries: uploadDays.map(day => ({
@@ -117,8 +135,8 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
     if (!query.data) return '…'
     return participantId == null ? query.data.counts.videos : query.data.members.find(m => m.user_id === participantId)?.videos ?? 0
   }
-  const busy = events.isFetching || summary.isFetching
-  const selectType = (value: RoomActivityType | undefined) => { setType(value); setPage(0) }
+  const busy = (events.isFetching && !isFetchingNextPage) || summary.isFetching
+  const selectType = (value: RoomActivityType | undefined) => setType(value)
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['room', room.room_id, 'activities'] })
     void qc.invalidateQueries({ queryKey: ['room', room.room_id, 'activity-summary'] })
@@ -140,13 +158,13 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
     { key: 'QUESTION' as const, label: '익명질문', value: counts?.questions, suffix: '개' },
   ]
   const groups = new Map<string, RoomActivity[]>()
-  events.data?.content.forEach(event => {
+  loaded.forEach(event => {
     const title = type === 'VIDEO' ? (event.day == null ? '일차 외 영상' : `DAY ${event.day}`)
       : `${event.day == null ? '일차 외 활동' : `DAY ${event.day}`} · ${dayjs(event.occurred_at).format('MM월 DD일')}`
     groups.set(title, [...(groups.get(title) ?? []), event])
   })
   const columns = [
-    { title: '참여자', dataIndex: 'name', render: (name: string, m: RoomActivitySummary['members'][number]) => <Button type="link" onClick={() => { setUserId(m.user_id); setPage(0) }}>{name}</Button> },
+    { title: '참여자', dataIndex: 'name', render: (name: string, m: RoomActivitySummary['members'][number]) => <Button type="link" onClick={() => setUserId(m.user_id)}>{name}</Button> },
     { title: '영상', dataIndex: 'videos' }, { title: '채팅', dataIndex: 'chats' },
     { title: '보낸 반응', dataIndex: 'reactions_sent' }, { title: '받은 반응', dataIndex: 'reactions_received' },
     { title: '받은 질문', dataIndex: 'questions_received' },
@@ -164,9 +182,9 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
       </div>
       <div className="activity-filters">
         <Space wrap>
-          <Select aria-label="활동 일차" value={day ?? 0} style={{ minWidth: 130 }} onChange={v => { setDay(v || undefined); setPage(0) }} options={[{ value: 0, label: '전체 일차' }, ...Array.from({ length: room.total_days }, (_, i) => ({ value: i + 1, label: `${i + 1}일차` }))]} />
-          <Select aria-label="활동 참여자" placeholder="전체 참여자" allowClear value={userId} style={{ minWidth: 180 }} onChange={v => { setUserId(v); setPage(0) }} options={room.members.map(m => ({ value: m.user_id, label: m.pseudonym || m.nickname || `참여자 #${m.user_id}` }))} />
-          {(day != null || userId != null) && <Button type="text" onClick={() => { setDay(undefined); setUserId(undefined); setPage(0) }}>필터 초기화</Button>}
+          <Select aria-label="활동 일차" value={day ?? 0} style={{ minWidth: 130 }} onChange={v => setDay(v || undefined)} options={[{ value: 0, label: '전체 일차' }, ...Array.from({ length: room.total_days }, (_, i) => ({ value: i + 1, label: `${i + 1}일차` }))]} />
+          <Select aria-label="활동 참여자" placeholder="전체 참여자" allowClear value={userId} style={{ minWidth: 180 }} onChange={v => setUserId(v)} options={room.members.map(m => ({ value: m.user_id, label: m.pseudonym || m.nickname || `참여자 #${m.user_id}` }))} />
+          {(day != null || userId != null) && <Button type="text" onClick={() => { setDay(undefined); setUserId(undefined) }}>필터 초기화</Button>}
         </Space>
         <Text type="secondary">{day ? `${day}일차` : '전체 기간'} · {userId ? '선택한 참여자 관련 활동' : `참여자 ${room.members.length}명`}</Text>
       </div>
@@ -198,17 +216,22 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
     <Card className="activity-feed">
       <div className="activity-feed-toolbar">
         <div className="activity-tab-scroll"><Segmented value={type ?? 'ALL'} onChange={v => selectType(v === 'ALL' ? undefined : v as RoomActivityType)} options={[{ label: '전체 활동', value: 'ALL' }, { label: '영상 모아보기', value: 'VIDEO' }, { label: '채팅', value: 'CHAT' }, { label: '반응', value: 'REACTION' }, { label: '익명질문', value: 'QUESTION' }]} /></div>
-        <Select aria-label="활동 정렬" value={order} onChange={v => { setOrder(v); setPage(0) }} options={[{ value: 'desc', label: '최신순' }, { value: 'asc', label: '오래된순' }]} style={{ width: 120 }} />
+        <Select aria-label="활동 정렬" value={order} onChange={v => setOrder(v)} options={[{ value: 'desc', label: '최신순' }, { value: 'asc', label: '오래된순' }]} style={{ width: 120 }} />
       </div>
       {type !== 'QUESTION' && <div className="activity-feed-caption"><Text type="secondary">{type === 'REACTION' ? '현재 남아 있는 반응을 표시합니다. 취소·교체된 반응의 이력은 포함하지 않습니다.' : type === 'VIDEO' ? '영상을 누르면 재생할 수 있습니다. 선택한 일차와 참여자 기준으로 표시됩니다.' : '일차는 방 시작 시각을 기준으로 구분합니다. 채팅은 방의 그룹 대화 내역입니다.'}</Text></div>}
-      {events.isError ? <Alert type="error" showIcon title="활동 내역을 불러오지 못했습니다." description="연결 상태와 관리자 조회 API를 확인한 후 다시 시도해 주세요." action={<Button onClick={() => void events.refetch()}>다시 시도</Button>} />
+      {events.isError && !loaded.length ? <Alert type="error" showIcon title="활동 내역을 불러오지 못했습니다." description="연결 상태와 관리자 조회 API를 확인한 후 다시 시도해 주세요." action={<Button onClick={() => void events.refetch()}>다시 시도</Button>} />
         : events.isLoading ? <Skeleton active paragraph={{ rows: 6 }} />
-          : !events.data?.content.length ? <Empty description="선택한 조건에 해당하는 활동이 없습니다." />
-            : <div aria-busy={events.isFetching}>{[...groups].map(([title, items]) => <section key={title} className="activity-day-group">
-              <div className="activity-day-heading"><Text strong>{title}</Text><Text type="secondary">이 페이지 {items.length}건</Text></div>
+          : !loaded.length ? <Empty description="선택한 조건에 해당하는 활동이 없습니다." />
+            : <div className="activity-scroll" ref={scroller} aria-busy={events.isFetching && !isFetchingNextPage}>{[...groups].map(([title, items]) => <section key={title} className="activity-day-group">
+              <div className="activity-day-heading"><Text strong>{title}</Text><Text type="secondary">{items.length}건</Text></div>
               {type === 'VIDEO' ? <VideoSlots items={items} onVideo={setVideo} order={order} /> : <div className="activity-event-list">{items.map(event => <EventCard key={`${event.type}-${event.id}`} event={event} onVideo={setVideo} />)}</div>}
-            </section>)}</div>}
-      {!events.isError && events.data && events.data.page.total_elements > 0 && <div className="activity-pagination"><Pagination current={page + 1} total={events.data.page.total_elements} pageSize={pageSize} showSizeChanger={false} showTotal={total => `총 ${total.toLocaleString()}건`} onChange={p => setPage(p - 1)} /></div>}
+            </section>)}<div ref={sentinel} className="activity-scroll-end" /></div>}
+      {loaded.length > 0 && <div className="activity-more">
+        <Text type="secondary">총 {total.toLocaleString()}건 중 {loaded.length.toLocaleString()}건</Text>
+        {isFetchNextPageError ? <Space><Text type="danger">이어서 불러오지 못했습니다.</Text><Button size="small" onClick={() => void fetchNextPage()}>다시 시도</Button></Space>
+          : hasNextPage ? <Button size="small" loading={isFetchingNextPage} onClick={() => void fetchNextPage()}>더 보기</Button>
+            : <Text type="secondary">마지막 활동입니다</Text>}
+      </div>}
     </Card>
     <Modal title={video?.caption || '영상 보기'} open={video != null} onCancel={() => setVideo(null)} footer={null} destroyOnHidden width={760}>
       {video && <VideoPlayer key={`${video.id}-${video.video_url}`} video={video} />}

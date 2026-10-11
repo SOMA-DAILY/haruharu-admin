@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
 import type {
   IapPurchaseQuery,
@@ -32,8 +32,15 @@ export const useRooms = (q: RoomListQuery) =>
 export const useRoom = (roomId: number) =>
   useQuery({ queryKey: ['room', roomId], queryFn: () => roomsApi.detail(roomId), enabled: !!roomId })
 
-export const useRoomActivities = (roomId: number, q: RoomActivityQuery) =>
-  useQuery({ queryKey: ['room', roomId, 'activities', q], queryFn: () => roomsApi.activities(roomId, q), enabled: roomId > 0 })
+// 무한 스크롤: 서버의 page 를 올려 가며 이어 붙인다. 조건(q)이 바뀌면 처음부터
+export const useRoomActivities = (roomId: number, q: Omit<RoomActivityQuery, 'page'>) =>
+  useInfiniteQuery({
+    queryKey: ['room', roomId, 'activities', q],
+    queryFn: ({ pageParam }) => roomsApi.activities(roomId, { ...q, page: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (last) => (last.page.page + 1 < last.page.total_pages ? last.page.page + 1 : undefined),
+    enabled: roomId > 0,
+  })
 
 export const useRoomActivitySummary = (roomId: number, q: Pick<RoomActivityQuery, 'day' | 'userId'>) =>
   useQuery({ queryKey: ['room', roomId, 'activity-summary', q], queryFn: () => roomsApi.activitySummary(roomId, q), enabled: roomId > 0 })
