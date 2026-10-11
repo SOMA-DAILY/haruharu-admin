@@ -200,7 +200,7 @@ export interface RoomInvite {
 }
 // 방 미션·안내 (BE #482 · #484 · #486). 예전 편성 한 줄 = 미션 하나 + 안내 하나
 export type RevealField = 'MBTI' | 'INTO_NOW' | 'AGE' | 'DEPARTMENT'
-export type MissionType = 'ANNOUNCEMENT' | 'PROFILE_REVEAL'
+export type MissionType = 'ANNOUNCEMENT' | 'PROFILE_REVEAL' | 'RECORDING'
 export type MissionStatus = 'SCHEDULED' | 'OPEN' | 'CLOSED' | 'CANCELED'
 export type AnnouncementType = 'START' | 'REMINDER' | 'RESULT'
 export type AnnouncementStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELED' | 'FAILED'
@@ -211,7 +211,7 @@ export interface MissionImage {
   width: number
   height: number
 }
-// type 에 따라 한쪽만 온다: ANNOUNCEMENT = content, PROFILE_REVEAL = reveal_fields
+// type 에 따라 한쪽만 온다: ANNOUNCEMENT·RECORDING = content(RECORDING 은 촬영 주제), PROFILE_REVEAL = reveal_fields
 export interface MissionDetails {
   content?: string | null
   reveal_fields?: RevealField[] | null

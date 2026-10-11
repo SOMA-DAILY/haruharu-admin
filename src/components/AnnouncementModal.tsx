@@ -171,7 +171,7 @@ export default function AnnouncementModal({
     })
   }
 
-  const title = announcement ? `안내 수정 ${dayjs(announcement.run_at).format('MM/DD HH:mm')}` : '안내 추가'
+  const title = announcement ? `${readOnly ? '글 보기' : '글 수정'} · ${dayjs(announcement.run_at).format('MM/DD HH:mm')}` : '글 추가 예약'
   const saving = createMut.isPending || updateMut.isPending
 
   return (
@@ -191,7 +191,7 @@ export default function AnnouncementModal({
             )}
           </div>
           <Space>
-            <Button onClick={onClose}>취소</Button>
+            <Button onClick={onClose}>{readOnly ? '닫기' : '취소'}</Button>
             {!readOnly && (
               <Button type="primary" loading={saving} onClick={() => form.submit()}>
                 저장
@@ -230,7 +230,7 @@ export default function AnnouncementModal({
                     validator: (_, value?: Dayjs) =>
                       mode === 'NOW' || !value || !opensAt || !value.isBefore(opensAt)
                         ? Promise.resolve()
-                        : Promise.reject(new Error('안내는 미션 시작 이후로 지정해 주세요')),
+                        : Promise.reject(new Error('미션 시작 이후로 지정해 주세요')),
                   },
                 ]}
               >
@@ -244,7 +244,7 @@ export default function AnnouncementModal({
             </Space>
           </Form.Item>
           {/* 용도는 만든 뒤 바꿀 수 없다 */}
-          <Form.Item name="announcement_type" label="용도" style={{ marginBottom: 16 }}>
+          <Form.Item name="announcement_type" label="종류" style={{ marginBottom: 16 }}>
             <Select
               disabled={readOnly || !!announcement}
               options={ANNOUNCEMENT_TYPES.map((t) => ({ value: t, label: ANNOUNCEMENT_TYPE_LABEL[t] }))}
@@ -254,14 +254,14 @@ export default function AnnouncementModal({
 
         <Form.Item
           name="content"
-          label="채팅 글"
+          label="채팅에 올라갈 글"
           dependencies={['announcement_type']}
           rules={[
             {
               validator: (_, value?: string) =>
                 value?.trim() || contentOptional
                   ? Promise.resolve()
-                  : Promise.reject(new Error('안내 내용을 입력해 주세요')),
+                  : Promise.reject(new Error('글을 입력해 주세요')),
             },
           ]}
           extra={contentOptional ? '비우면 채팅 글 없이 공개 푸시만 나가요' : undefined}

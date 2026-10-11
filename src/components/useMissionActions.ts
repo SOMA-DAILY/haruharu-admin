@@ -51,7 +51,7 @@ export function useMissionActions(roomId: number, room: RoomDetail) {
 
   const cancelAnnouncement = (a: MissionAnnouncement) =>
     modal.confirm({
-      title: '안내 예약을 취소할까요?',
+      title: '예약한 글을 취소할까요?',
       okType: 'danger',
       okText: '예약 취소',
       cancelText: '닫기',
@@ -83,7 +83,7 @@ export function useMissionActions(roomId: number, room: RoomDetail) {
   const cancelMission = (m: RoomMission) =>
     modal.confirm({
       title: '미션을 취소할까요?',
-      content: '예약된 안내도 함께 취소돼요. 되돌릴 수 없어요',
+      content: '예약된 글도 함께 취소돼요. 되돌릴 수 없어요',
       okType: 'danger',
       okText: '미션 취소',
       cancelText: '닫기',
