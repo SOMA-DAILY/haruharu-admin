@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Card, Table, Select, DatePicker, Space, Button } from 'antd'
+import { Card, Table, Select, DatePicker, Space, Button, Tooltip, Typography } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
-import { useRooms } from '../api/queries'
+import { useQuery } from '@tanstack/react-query'
+import { roomsApi } from '../api/endpoints'
+import { useRoomActivitySummary, useRooms } from '../api/queries'
 import { useAuth } from '../auth/AuthContext'
 import { RoomStatusTag } from '../components/StatusTag'
 import CreateRoomModal from '../components/CreateRoomModal'
@@ -18,6 +20,37 @@ const STATUS_OPTIONS = [
   { value: 'ENDED', label: '종료' },
   { value: 'CANCELLED', label: '취소' },
 ]
+
+// 목록 응답엔 활동 수치가 없어 방마다 활동 요약을 따로 부른다 (방 상세와 같은 조회 · 캐시 공유).
+// 시작 전·취소·빈 방은 부르지 않는다. 방이 많아져 느려지면 목록용 집계 API 로 옮긴다
+function RoomActivityCell({ room, kind }: { room: RoomListItem; kind: 'uploads' | 'chats' }) {
+  const skip = room.status === 'PENDING' || room.status === 'CANCELLED' || room.member_count === 0
+  // 진행 일수: 진행 중이면 현재 일차. 끝난 방은 목록에 일차가 없어(0) 방 상세의 총 일수를 쓴다
+  const needsDetail = !skip && kind === 'uploads' && room.current_day <= 0
+  const summary = useRoomActivitySummary(skip ? 0 : room.room_id, {})
+  const detail = useQuery({
+    queryKey: ['room', room.room_id],
+    queryFn: () => roomsApi.detail(room.room_id),
+    enabled: needsDetail,
+  })
+  if (skip) return '-'
+  if (summary.isError || (needsDetail && detail.isError)) return <Typography.Text type="danger">조회 실패</Typography.Text>
+  const days = room.current_day > 0 ? room.current_day : detail.data?.total_days
+  if (!summary.data || (kind === 'uploads' && !days)) return <Typography.Text type="secondary">…</Typography.Text>
+  const { videos, chats } = summary.data.counts
+  if (kind === 'chats')
+    return (
+      <>
+        {chats.toLocaleString()}{' '}
+        <Typography.Text type="secondary">(1인 {(chats / room.member_count).toFixed(1)})</Typography.Text>
+      </>
+    )
+  return (
+    <Tooltip title={`영상 ${videos.toLocaleString()}개 ÷ ${room.member_count}명 ÷ ${days}일`}>
+      {(videos / room.member_count / days!).toFixed(1)}개
+    </Tooltip>
+  )
+}
 
 const columns: ColumnsType<RoomListItem> = [
   { title: '방 ID', dataIndex: 'room_id', width: 90 },
@@ -34,6 +67,13 @@ const columns: ColumnsType<RoomListItem> = [
     key: 'members',
     render: (_, r) => `${r.member_count}명 (${r.female_count}/${r.male_count})`,
   },
+  {
+    title: <Tooltip title="1인당 하루 평균 영상 업로드 수">일평균 업로드</Tooltip>,
+    key: 'uploads',
+    width: 130,
+    render: (_, r) => <RoomActivityCell room={r} kind="uploads" />,
+  },
+  { title: '채팅', key: 'chats', width: 150, render: (_, r) => <RoomActivityCell room={r} kind="chats" /> },
   {
     title: '시작시각',
     dataIndex: 'started_at',
