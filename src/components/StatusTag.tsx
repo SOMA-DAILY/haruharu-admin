@@ -95,9 +95,10 @@ export function AnnouncementStatusTag({ status, failReason }: { status: Announce
   return status === 'FAILED' && failReason ? <Tooltip title={failReason}>{tag}</Tooltip> : tag
 }
 
+const MISSION_TYPE_COLOR: Record<MissionType, string> = { ANNOUNCEMENT: 'blue', PROFILE_REVEAL: 'gold', RECORDING: 'cyan' }
 export function MissionTypeTag({ type }: { type: MissionType }) {
   // 모르는 유형이 와도 죽지 않게 원문 표시
-  return <Tag color={type === 'PROFILE_REVEAL' ? 'gold' : 'blue'}>{MISSION_TYPE_LABEL[type] ?? type}</Tag>
+  return <Tag color={MISSION_TYPE_COLOR[type] ?? 'blue'}>{MISSION_TYPE_LABEL[type] ?? type}</Tag>
 }
 export function AnnouncementTypeTag({ type }: { type: AnnouncementType }) {
   return <Tag>{ANNOUNCEMENT_TYPE_LABEL[type] ?? type}</Tag>
