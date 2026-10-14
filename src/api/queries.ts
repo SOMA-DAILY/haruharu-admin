@@ -177,6 +177,10 @@ export const useUsers = (q: UserListQuery) =>
 export const useUser = (userId: number) =>
   useQuery({ queryKey: ['user', userId], queryFn: () => usersApi.detail(userId), enabled: !!userId })
 
+// 방 참여 이력 (SUPER·OPERATOR) — enabled로 CS 시 미호출
+export const useUserRooms = (userId: number, enabled = true) =>
+  useQuery({ queryKey: ['user', userId, 'rooms'], queryFn: () => usersApi.rooms(userId), enabled: !!userId && enabled })
+
 export const useIapPurchases = (q: IapPurchaseQuery) =>
   useQuery({ queryKey: ['iap', 'purchases', q], queryFn: () => iapApi.list(q) })
 
