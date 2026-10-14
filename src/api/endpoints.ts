@@ -35,7 +35,6 @@ import type {
   TokenPair,
   UserDetail,
   UserListItem,
-  UserRoomHistory,
   UserStatus,
 } from './types'
 
@@ -134,8 +133,6 @@ export interface UserListQuery {
 export const usersApi = {
   list: (q: UserListQuery) => get<Paged<UserListItem>>('/users', q),
   detail: (userId: number) => get<UserDetail>(`/users/${userId}`),
-  // 방 참여 이력 — 최종 선택·활동 포함이라 SUPER·OPERATOR 전용
-  rooms: (userId: number) => get<UserRoomHistory[]>(`/users/${userId}/rooms`),
 }
 
 // ===== 재화·결제 IAP (#237) =====

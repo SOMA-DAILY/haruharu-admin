@@ -350,23 +350,3 @@ export interface UserDetail {
   }[]
 }
 
-// ===== 유저 방 참여 이력 (BE #508 · SUPER·OPERATOR) =====
-export type UserRoomOutcome = 'MATCHED' | 'MUTUAL' | 'ONE_WAY' | 'PASSED' | 'NOT_SUBMITTED'
-export interface UserRoomHistory {
-  room_id: number
-  room_status: RoomStatus
-  scheduled_date: string
-  total_days: number
-  starts_at: string | null
-  ends_at: string | null
-  joined_at: string
-  pseudonym: string | null
-  gender: string | null // 보통 MALE·FEMALE, 옛 데이터엔 M·F 같은 값도 있다
-  selection_submitted: boolean
-  selected: { user_id: number; name: string } | null
-  received_count: number
-  // 선택이 열리기 전·취소 방에서 낸 게 없으면 null
-  outcome: UserRoomOutcome | null
-  video_count: number
-  chat_count: number
-}
