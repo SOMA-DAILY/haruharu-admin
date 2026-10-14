@@ -304,7 +304,7 @@ export interface UserListItem {
 export interface UserPayment {
   purchase_id: number
   store_product_id: string
-  coin_amount: number
+  ticket_amount: number
   store: IapStore
   status: IapPurchaseStatus
   purchased_at: string
@@ -340,7 +340,7 @@ export interface UserDetail {
     affiliation: string | null
     height: number | null
   } | null
-  coin: { paid: number; reward: number; total: number }
+  ticket: { balance: number }
   payments: UserPayment[]
   participations: {
     room_id: number
@@ -349,3 +349,4 @@ export interface UserDetail {
     joined_at: string
   }[]
 }
+

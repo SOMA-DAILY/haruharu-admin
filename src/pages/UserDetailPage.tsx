@@ -1,17 +1,17 @@
-import { Card, Descriptions, Table, Button, Alert, Skeleton, Space, Statistic, Row, Col, Tag, Empty } from 'antd'
+import { Card, Descriptions, Table, Button, Alert, Skeleton, Space, Statistic, Tag, Empty } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate, useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
 import { useUser } from '../api/queries'
-import { UserStatusTag, RoomStatusTag, IapStatusTag } from '../components/StatusTag'
-import type { UserPayment, UserDetail } from '../api/types'
+import { UserStatusTag, IapStatusTag } from '../components/StatusTag'
+import type { UserPayment } from '../api/types'
 
 const paymentColumns: ColumnsType<UserPayment> = [
   { title: '구매 ID', dataIndex: 'purchase_id', width: 90 },
   { title: '상품', dataIndex: 'store_product_id' },
-  { title: '코인', dataIndex: 'coin_amount', width: 80 },
+  { title: '티켓', dataIndex: 'ticket_amount', width: 80 },
   {
     title: '스토어',
     dataIndex: 'store',
@@ -26,24 +26,12 @@ const paymentColumns: ColumnsType<UserPayment> = [
   },
 ]
 
-const participationColumns: (nav: (id: number) => void) => ColumnsType<UserDetail['participations'][number]> = (
-  nav,
-) => [
-  { title: '방 ID', dataIndex: 'room_id', width: 90, render: (v: number) => <a onClick={() => nav(v)}>{v}</a> },
-  {
-    title: '상태',
-    dataIndex: 'room_status',
-    width: 100,
-    render: (s: UserDetail['participations'][number]['room_status']) => <RoomStatusTag status={s} />,
-  },
-  { title: '예정일', dataIndex: 'scheduled_date', width: 120 },
-  { title: '참여시각', dataIndex: 'joined_at', render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm') },
-]
-
 export default function UserDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data, isLoading, isError } = useUser(Number(id))
+  // 참여한 방 아이디만 최신 입장순으로(같은 방은 한 번)
+  const roomIds = [...new Set(data?.participations.map((p) => p.room_id) ?? [])]
 
   if (isError) return <Alert type="error" message="유저 정보를 찾을 수 없습니다." showIcon />
 
@@ -83,18 +71,8 @@ export default function UserDetailPage() {
               />
             </Card>
 
-            <Card title="코인 지갑">
-              <Row gutter={16}>
-                <Col span={8}>
-                  <Statistic title="유료" value={data.coin.paid} />
-                </Col>
-                <Col span={8}>
-                  <Statistic title="리워드" value={data.coin.reward} />
-                </Col>
-                <Col span={8}>
-                  <Statistic title="합계" value={data.coin.total} />
-                </Col>
-              </Row>
+            <Card title="티켓">
+              <Statistic title="잔액" value={data.ticket.balance} suffix="장" />
             </Card>
 
             <Card title={`결제 내역 (${data.payments.length})`}>
@@ -105,15 +83,15 @@ export default function UserDetailPage() {
               )}
             </Card>
 
-            <Card title={`참여 방 이력 (${data.participations.length})`}>
-              {data.participations.length ? (
-                <Table
-                  rowKey="room_id"
-                  columns={participationColumns((rid) => navigate(`/sessions/${rid}`))}
-                  dataSource={data.participations}
-                  pagination={false}
-                  size="small"
-                />
+            <Card title={`참여 방 이력 (${roomIds.length})`}>
+              {roomIds.length ? (
+                <Space size={[8, 8]} wrap>
+                  {roomIds.map((rid) => (
+                    <Tag key={rid} color="blue" style={{ cursor: 'pointer' }} onClick={() => navigate(`/sessions/${rid}`)}>
+                      #{rid}
+                    </Tag>
+                  ))}
+                </Space>
               ) : (
                 <Empty description="참여 이력 없음" />
               )}
