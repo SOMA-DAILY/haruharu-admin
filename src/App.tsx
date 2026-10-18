@@ -11,6 +11,7 @@ import IapPage from './pages/IapPage'
 import PaymentDetailPage from './pages/PaymentDetailPage'
 import AuditPage from './pages/AuditPage'
 import DemoPage from './pages/DemoPage'
+import CohortApplicationsPage from './pages/CohortApplicationsPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/sessions/:id" element={<RoomDetailPage />} />
+          <Route path="/cohort-applications" element={<CohortApplicationsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/:id" element={<UserDetailPage />} />
           <Route path="/iap" element={<IapPage />} />

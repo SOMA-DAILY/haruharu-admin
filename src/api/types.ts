@@ -98,6 +98,11 @@ export interface RoomListItem {
   female_count: number
   male_count: number
   started_at: string | null
+  // 기수 방 (BE #529). 웹 전용 방은 null
+  cohort_id?: number | null
+  name?: string | null
+  male_capacity?: number | null
+  female_capacity?: number | null
 }
 
 export interface RoomMember {
@@ -109,6 +114,12 @@ export interface RoomMember {
   pseudonym: string | null // 방 세션 가명(미배정 시 null, BE #393/#400)
   age: number | null
   region: string | null
+  // 입장 경로·본인 확인 (BE #513), 학교/학과 (BE #529)
+  entry_path?: RoomEntryPath
+  application_id?: number | null
+  identity_verified?: boolean
+  school?: string | null
+  department?: string | null
 }
 
 export interface RoomDetail {
@@ -127,6 +138,12 @@ export interface RoomDetail {
   female_count: number
   male_count: number
   members: RoomMember[]
+  // 기수 방 (BE #513)
+  cohort_id?: number | null
+  name?: string | null
+  male_capacity?: number | null
+  female_capacity?: number | null
+  invite_member_count?: number
 }
 
 export type RoomActivityType = 'VIDEO' | 'CHAT' | 'REACTION' | 'QUESTION'
@@ -184,6 +201,11 @@ export interface CreateRoomBody {
   max_uses?: number | null
   invite_expires_at?: string | null
   missions?: RoomMissionBody[] // 최대 100개. 서버 기본 미션 없음
+  // 기수 방 (BE #513, 모두 선택. 비우면 웹 전용 방)
+  cohort_id?: number | null
+  name?: string | null
+  male_capacity?: number | null
+  female_capacity?: number | null
 }
 export interface RoomCreated {
   room_id: number
@@ -350,3 +372,63 @@ export interface UserDetail {
   }[]
 }
 
+// ===== 모집 트랙·기수·앱 신청 (BE #510 · #515 · #516) =====
+export type RoomEntryPath = 'INVITE' | 'APPLICATION'
+export type CohortStatus = 'DRAFT' | 'OPEN' | 'SETTLED' | 'CANCELLED'
+export type CohortApplicationStatus =
+  | 'IDENTITY_PENDING'
+  | 'NEEDS_REVIEW'
+  | 'QUEUED'
+  | 'ASSIGNED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'NOT_ASSIGNED'
+export interface RecruitTrack {
+  id: number
+  key: string
+  label: string
+  region: string
+  audience: string
+  min_age: number
+  max_age: number
+  questions: { key: string; label: string }[]
+  display_order: number
+  active: boolean
+}
+export interface Cohort {
+  id: number
+  track_id: number
+  track_label: string
+  sequence: number
+  name: string
+  status: CohortStatus
+  apply_closes_at: string
+  period_label: string
+  is_accepting: boolean
+}
+export interface CohortApplication {
+  application_id: number
+  user_id: number
+  status: CohortApplicationStatus
+  review_reason: string | null
+  name: string | null // PASS 이름. PASS 전이면 null
+  gender: Gender | null
+  age: number | null
+  school: string
+  department: string
+  phone: string | null
+  priority: number
+  applied_at: string
+  queued_at: string | null
+  room_id: number | null
+  past_room_ids: number[]
+  close_reason: string | null
+  admin_memo: string | null
+}
+export interface AssignedMember {
+  application_id: number
+  user_id: number
+  member_id: number
+  gender: Gender
+  pseudonym: string | null
+}
