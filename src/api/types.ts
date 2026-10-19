@@ -161,6 +161,8 @@ export interface RoomActivity {
   reaction_type: string | null
   answer: string | null
   answered_at: string | null
+  // 채팅의 답장 종류 (BE #500). 답장이 아니거나 서버가 아직 안 내려주면 없음
+  reply_type?: 'MESSAGE' | 'VIDEO' | null
 }
 export interface RoomActivitySummary {
   counts: { videos: number; chats: number; reactions: number; questions: number }
