@@ -1,5 +1,8 @@
 import { del, get, http, patch, post, put } from './client'
 import type {
+  AppUpdatePolicy,
+  AppUpdatePolicyHistory,
+  UpdateAppUpdatePolicyBody,
   AdminAccount,
   AdminMe,
   AnnouncementBody,
@@ -162,4 +165,10 @@ export const adminsApi = {
 export const demoApi = {
   getCode: () => get<DemoAccessCode>('/demo/access-code'),
   setCode: (body: SetDemoCodeBody) => put<DemoAccessCode>('/demo/access-code', body),
+}
+
+export const appUpdatePolicyApi = {
+  get: () => get<AppUpdatePolicy>('/app-update-policy'),
+  update: (body: UpdateAppUpdatePolicyBody) => put<AppUpdatePolicy>('/app-update-policy', body),
+  history: () => get<AppUpdatePolicyHistory[]>('/app-update-policy/history'),
 }
