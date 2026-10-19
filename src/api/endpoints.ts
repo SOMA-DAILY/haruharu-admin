@@ -1,15 +1,13 @@
 import { del, get, http, patch, post, put } from './client'
-import type { MissionImage, OperatorMission, OperatorMissionInput, OperatorMissionPage } from './types'
 import type {
   AdminAccount,
   AdminMe,
-  AdminMission,
-  AdminMissionRevision,
+  AnnouncementBody,
+  AnnouncementPage,
   AssignGenderBody,
   CreateAdminAccountBody,
   CreateRoomBody,
   DemoAccessCode,
-  MissionRevisionBody,
   SetDemoCodeBody,
   UpdateAdminAccountBody,
   DashboardMetrics,
@@ -18,6 +16,8 @@ import type {
   IapPurchaseListItem,
   IapPurchaseStatus,
   LoginRequest,
+  MissionAnnouncement,
+  MissionImage,
   Paged,
   ReissueInviteBody,
   RoomCreated,
@@ -25,8 +25,9 @@ import type {
   RoomInvite,
   RoomListItem,
   RoomMemberAssigned,
-  RoomScheduleItem,
-  ScheduleItemBody,
+  RoomMission,
+  RoomMissionBody,
+  RoomMissionPage,
   RoomStatus,
   RoomActivity,
   RoomActivitySummary,
@@ -87,31 +88,42 @@ export const roomsApi = {
   cancel: (roomId: number) => post<null>(`/rooms/${roomId}/cancel`),
   assignGender: (roomId: number, memberId: number, body: AssignGenderBody) =>
     patch<RoomMemberAssigned>(`/rooms/${roomId}/members/${memberId}`, body),
-  // 방 편성 (조회 전 역할, 쓰기 SUPER·OPERATOR)
-  schedule: (roomId: number) => get<RoomScheduleItem[]>(`/rooms/${roomId}/schedule`),
-  createScheduleItem: (roomId: number, body: ScheduleItemBody) =>
-    post<RoomScheduleItem>(`/rooms/${roomId}/schedule`, body),
-  updateScheduleItem: (roomId: number, itemId: number, body: ScheduleItemBody) =>
-    patch<RoomScheduleItem>(`/rooms/${roomId}/schedule/${itemId}`, body),
-  sendScheduleNow: (roomId: number, itemId: number) =>
-    post<RoomScheduleItem>(`/rooms/${roomId}/schedule/${itemId}/send-now`),
-  cancelScheduleItem: (roomId: number, itemId: number) =>
-    post<RoomScheduleItem>(`/rooms/${roomId}/schedule/${itemId}/cancel`),
-  deleteScheduleMessage: (roomId: number, itemId: number) =>
-    del<null>(`/rooms/${roomId}/schedule/${itemId}/message`),
 }
 
-export const operatorMissionsApi = {
-  uploadImage: async (roomId: number, file: File, signal: AbortSignal) => {
+// ===== 방 미션·안내 (BE #482 · #484 · #486. 조회 전 역할, 쓰기 SUPER·OPERATOR) =====
+export interface CursorQuery {
+  after?: number
+  size?: number
+}
+export const roomMissionsApi = {
+  list: (roomId: number, q?: CursorQuery) => get<RoomMissionPage>(`/rooms/${roomId}/missions`, q),
+  detail: (roomId: number, missionId: number) => get<RoomMission>(`/rooms/${roomId}/missions/${missionId}`),
+  create: (roomId: number, body: RoomMissionBody) => post<RoomMission>(`/rooms/${roomId}/missions`, body),
+  // 시작 전 미션 전체 교체 (closes_at·image_key 를 빼면 지워짐)
+  update: (roomId: number, missionId: number, body: RoomMissionBody) =>
+    put<RoomMission>(`/rooms/${roomId}/missions/${missionId}`, body),
+  cancel: (roomId: number, missionId: number) => post<RoomMission>(`/rooms/${roomId}/missions/${missionId}/cancel`),
+  announcements: (roomId: number, missionId: number, q?: CursorQuery) =>
+    get<AnnouncementPage>(`/rooms/${roomId}/missions/${missionId}/announcements`, q),
+  createAnnouncement: (roomId: number, missionId: number, body: AnnouncementBody) =>
+    post<MissionAnnouncement>(`/rooms/${roomId}/missions/${missionId}/announcements`, body),
+  updateAnnouncement: (roomId: number, missionId: number, id: number, body: AnnouncementBody) =>
+    put<MissionAnnouncement>(`/rooms/${roomId}/missions/${missionId}/announcements/${id}`, body),
+  sendAnnouncementNow: (roomId: number, missionId: number, id: number) =>
+    post<MissionAnnouncement>(`/rooms/${roomId}/missions/${missionId}/announcements/${id}/send-now`),
+  cancelAnnouncement: (roomId: number, missionId: number, id: number) =>
+    post<MissionAnnouncement>(`/rooms/${roomId}/missions/${missionId}/announcements/${id}/cancel`),
+  deleteAnnouncementMessage: (roomId: number, missionId: number, id: number) =>
+    del<MissionAnnouncement>(`/rooms/${roomId}/missions/${missionId}/announcements/${id}/message`),
+}
+
+// 미션 사진 (multipart file. JPG·PNG 10MB 이하). 응답 key 를 미션 image_key 로 보낸다
+export const missionImagesApi = {
+  upload: async (file: File) => {
     const body = new FormData()
     body.append('file', file)
-    return (await http.post<MissionImage>(`/rooms/${roomId}/operator-missions/images`, body, { signal, timeout: 60000 })).data
+    return (await http.post<MissionImage>('/mission-images', body, { timeout: 60000 })).data
   },
-  list: (roomId: number, cursor?: number) => get<OperatorMissionPage>(`/rooms/${roomId}/operator-missions`, { cursor, size: 20 }),
-  create: (roomId: number, body: OperatorMissionInput) => post<OperatorMission>(`/rooms/${roomId}/operator-missions`, body),
-  update: (roomId: number, id: number, body: OperatorMissionInput) => put<OperatorMission>(`/rooms/${roomId}/operator-missions/${id}`, body),
-  cancel: (roomId: number, id: number) => post<OperatorMission>(`/rooms/${roomId}/operator-missions/${id}/cancel`),
-  delete: (roomId: number, id: number) => del<OperatorMission>(`/rooms/${roomId}/operator-missions/${id}`),
 }
 
 // ===== 유저 (#193) =====
@@ -144,23 +156,6 @@ export const adminsApi = {
   list: () => get<AdminAccount[]>('/admins'),
   create: (body: CreateAdminAccountBody) => post<AdminAccount>('/admins', body),
   update: (id: number, body: UpdateAdminAccountBody) => patch<AdminAccount>(`/admins/${id}`, body),
-}
-
-// ===== 미션 카탈로그 (SUPER 전용 · revision 모델) =====
-export interface MissionListQuery {
-  page?: number
-  size?: number
-}
-export const missionsApi = {
-  list: (q?: MissionListQuery) => get<Paged<AdminMission>>('/missions', q),
-  create: (body: MissionRevisionBody) => post<AdminMission>('/missions', body),
-  // 수정 = 새 revision 발행 (과거 revision 보존)
-  publishRevision: (id: number, body: MissionRevisionBody) =>
-    post<AdminMission>(`/missions/${id}/revisions`, body),
-  changeStatus: (id: number, active: boolean) =>
-    patch<AdminMission>(`/missions/${id}/status`, { active }),
-  revisions: (id: number, q?: MissionListQuery) =>
-    get<Paged<AdminMissionRevision>>(`/missions/${id}/revisions`, q),
 }
 
 // ===== 데모 접근 코드 (SUPER 전용) =====

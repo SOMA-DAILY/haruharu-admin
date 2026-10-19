@@ -11,6 +11,7 @@ import {
   Space,
   App,
   Card,
+  Checkbox,
   Input,
   Select,
   Switch,
@@ -23,17 +24,17 @@ import type { Dayjs } from 'dayjs'
 import { useCreateRoom } from '../api/queries'
 import { ApiError } from '../api/client'
 import { RoomTypeTag } from './StatusTag'
-import type { RevealField, ScheduleItemBody, RoomCreated } from '../api/types'
+import type { MissionImage, RevealField, RoomMissionBody, RoomCreated } from '../api/types'
+import MissionImagePicker from './MissionImagePicker'
 import {
   CHAT_SCHEDULE_DEFAULTS,
-  DEFAULT_PUSH_BODY,
-  DEFAULT_PUSH_TITLE,
   MESSAGE_MAX,
   PUSH_BODY_MAX,
   PUSH_TITLE_MAX,
   REVEAL_FIELDS,
   REVEAL_LABEL,
   dayOf,
+  pushDefaultsFor,
   resolveRunAt,
   type ScheduleTimeRule,
 } from '../config/chatScheduleDefaults'
@@ -54,13 +55,17 @@ type FormValues = {
 
 // ===== 채팅 편성 (E0) =====
 // rule 있는 줄 = 기본 편성 줄(시각 자동 계산, 공개 항목 고정), 없는 줄 = [+ 글 추가] 로 넣은 줄
+// recording = 촬영 미션(RECORDING). 글 하나가 촬영 주제이자 채팅 글이고, 공개 항목과 함께 쓸 수 없다
 type ScheduleRow = {
   uid: number
   rule: ScheduleTimeRule | null
   dirty: boolean // 시각을 손으로 바꿨으면 true → 방 시작/최종선택 오픈이 바뀌어도 재계산 안 함
   run_at?: Dayjs
   reveal_fields: RevealField[]
+  recording: boolean
   message_content: string
+  image: MissionImage | null // 먼저 올린 미션 사진 (선택)
+  uploading?: boolean
   push: boolean
   push_title: string
   push_body: string
@@ -75,7 +80,9 @@ const defaultRows = (start?: Dayjs | null, final?: Dayjs | null): ScheduleRow[] 
     dirty: false,
     run_at: resolveRunAt(d.rule, start, final),
     reveal_fields: [...d.reveal_fields],
+    recording: false,
     message_content: d.message_content,
+    image: null,
     push: d.push,
     push_title: d.push_title ?? '',
     push_body: d.push_body ?? '',
@@ -83,6 +90,8 @@ const defaultRows = (start?: Dayjs | null, final?: Dayjs | null): ScheduleRow[] 
 
 const rowError = (r: ScheduleRow) => {
   if (!r.run_at) return '시각을 선택하세요.'
+  if (r.recording && r.reveal_fields.length > 0) return '촬영 미션에는 공개 항목을 넣을 수 없어요'
+  if (r.recording && !r.message_content.trim()) return '촬영 미션에 올릴 글을 입력해 주세요'
   if (!r.message_content.trim() && r.reveal_fields.length === 0) return '운영 글이나 공개 항목 중 하나는 있어야 해요'
   return undefined
 }
@@ -115,7 +124,9 @@ function ChatScheduleSection({
         dirty: true,
         run_at: undefined,
         reveal_fields: [],
+        recording: false,
         message_content: '',
+        image: null,
         push: false,
         push_title: '',
         push_body: '',
@@ -139,7 +150,7 @@ function ChatScheduleSection({
         </Space>
       </div>
       <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>
-        방 시작과 최종선택 시각으로 시각이 자동 계산됨. 문구와 시각을 여기서 고친 채로 만들면 그대로 예약됨. 만든 뒤에는 방 상세 [방 편성] 에서 고침.
+        방 시작과 최종선택 시각으로 시각이 자동 계산됨. 문구와 시각을 여기서 고친 채로 만들면 그대로 예약됨. 만든 뒤에는 방 상세 [미션 일정] 에서 고침.
       </Typography.Paragraph>
       <Space orientation="vertical" size={8} style={{ width: '100%' }}>
         {rows.map((r) => {
@@ -197,6 +208,7 @@ function ChatScheduleSection({
                           allowClear
                           placeholder="없음"
                           style={{ minWidth: 180 }}
+                          disabled={r.recording}
                           value={r.reveal_fields}
                           onChange={(v: RevealField[]) => update(r.uid, { reveal_fields: v })}
                           options={REVEAL_FIELDS.map((f) => ({ value: f, label: REVEAL_LABEL[f] }))}
@@ -215,12 +227,7 @@ function ChatScheduleSection({
                         onChange={(checked) =>
                           update(r.uid, {
                             push: checked,
-                            ...(checked
-                              ? {
-                                  push_title: r.push_title || DEFAULT_PUSH_TITLE,
-                                  push_body: r.push_body || DEFAULT_PUSH_BODY,
-                                }
-                              : {}),
+                            ...(checked ? pushDefaultsFor(r.recording, r) : {}),
                           })
                         }
                       />
@@ -242,6 +249,37 @@ function ChatScheduleSection({
                     onChange={(e) => update(r.uid, { message_content: e.target.value })}
                     style={{ marginBottom: 20 }}
                   />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                      marginBottom: r.push ? 8 : 0,
+                    }}
+                  >
+                    <MissionImagePicker
+                      compact
+                      value={r.image}
+                      onChange={(image) => update(r.uid, { image })}
+                      onUploadingChange={(uploading) => update(r.uid, { uploading })}
+                    />
+                    {/* 공개 항목이 고정된 기본 줄은 촬영 미션으로 바꿀 수 없다 */}
+                    <Checkbox
+                      checked={r.recording}
+                      disabled={!!r.rule && r.reveal_fields.length > 0}
+                      onChange={(e) =>
+                        update(r.uid, {
+                          recording: e.target.checked,
+                          ...(e.target.checked ? { reveal_fields: [] } : {}),
+                          // 푸시 문구가 기본값 그대로면 유형에 맞는 기본값으로 바꾼다
+                          ...(r.push ? pushDefaultsFor(e.target.checked, r) : {}),
+                        })
+                      }
+                    >
+                      촬영 미션
+                    </Checkbox>
+                  </div>
                   {r.push && (
                     <div style={{ display: 'grid', gap: 6 }}>
                       <Input
@@ -288,6 +326,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
   const startsAt: Dayjs | undefined = AntForm.useWatch('starts_at', form)
   const finalOpensAt: Dayjs | undefined = AntForm.useWatch('final_selection_opens_at', form)
   const [scheduleRows, setScheduleRows] = useState<ScheduleRow[]>(() => defaultRows())
+  const uploadingPhoto = scheduleRows.some((r) => r.uploading)
   const onValuesChange = (changed: Partial<FormValues>, all: FormValues) => {
     if (!('starts_at' in changed || 'final_selection_opens_at' in changed)) return
     setScheduleRows((prev) =>
@@ -314,14 +353,29 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
       message.warning('채팅 편성을 확인하세요.')
       return
     }
-    const chat_schedule: ScheduleItemBody[] = scheduleRows.map((r) => ({
-      run_at: fmt(r.run_at!),
-      reveal_fields: r.reveal_fields,
-      message_content: r.message_content.trim() ? r.message_content : null,
-      push: r.push,
-      push_title: r.push && r.push_title.trim() ? r.push_title : null,
-      push_body: r.push && r.push_body.trim() ? r.push_body : null,
-    }))
+    if (uploadingPhoto) return
+    // 한 줄 = 미션 하나 + START 안내 하나. 촬영 미션이면 RECORDING (글이 촬영 주제이자 안내 글),
+    // 공개 항목이 있으면 PROFILE_REVEAL (글은 안내에만), 없으면 ANNOUNCEMENT
+    const missions: RoomMissionBody[] = scheduleRows.map((r) => {
+      const at = fmt(r.run_at!)
+      const content = r.message_content.trim() ? r.message_content : null
+      const reveal = !r.recording && r.reveal_fields.length > 0
+      return {
+        type: r.recording ? 'RECORDING' : reveal ? 'PROFILE_REVEAL' : 'ANNOUNCEMENT',
+        details: reveal ? { reveal_fields: r.reveal_fields } : { content },
+        image_key: r.image?.key ?? null,
+        opens_at: at,
+        closes_at: null,
+        announcement: {
+          announcement_type: 'START',
+          run_at: at,
+          content,
+          push: r.push,
+          push_title: r.push && r.push_title.trim() ? r.push_title : null,
+          push_body: r.push && r.push_body.trim() ? r.push_body : null,
+        },
+      }
+    })
     try {
       const res = await createMut.mutateAsync({
         is_test: v.room_type === 'TEST',
@@ -333,17 +387,15 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
         total_days: v.total_days,
         max_uses: v.max_uses ?? null,
         invite_expires_at: v.invite_expires_at ? fmt(v.invite_expires_at) : null,
-        // 새 방은 운영자 미션 패널로 직접 발송한다(BE #474). develop BE 는 이 값이 필수라 false 로 보낸다
-        mission_enabled: false,
-        chat_schedule,
+        missions,
       })
       setCreated(res)
     } catch (e) {
-      // 400 이 chat_schedule[i].xxx 칸으로 오면 그 줄 아래에 표시
+      // 400 이 missions[i].xxx 칸으로 오면 그 줄 아래에 표시
       const rowErrors = new Map<number, string>()
       if (e instanceof ApiError && e.status === 400 && e.fieldErrors) {
         for (const [field, msg] of Object.entries(e.fieldErrors)) {
-          const m = /^chat_schedule\[(\d+)\]/.exec(field)
+          const m = /^missions\[(\d+)\]/.exec(field)
           if (m && Number(m[1]) < scheduleRows.length && !rowErrors.has(Number(m[1]))) rowErrors.set(Number(m[1]), msg)
         }
       }
@@ -376,7 +428,14 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
               <Button key="cancel" onClick={close}>
                 취소
               </Button>,
-              <Button key="ok" type="primary" loading={createMut.isPending} onClick={() => form.submit()}>
+              // 사진을 올리는 중에 만들면 그 줄 사진이 빠지므로 막는다
+              <Button
+                key="ok"
+                type="primary"
+                loading={createMut.isPending}
+                disabled={uploadingPhoto}
+                onClick={() => form.submit()}
+              >
                 생성
               </Button>,
             ]

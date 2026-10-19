@@ -67,62 +67,6 @@ export interface UpdateAdminAccountBody {
   status?: AdminAccountStatus
 }
 
-// ===== 미션 카탈로그 (SUPER 전용 · revision 모델, BE #364) =====
-export type MissionAttributeLevel = 'LOW' | 'MEDIUM' | 'HIGH'
-export type MissionGoal = 'OBSERVATION' | 'PREFERENCE' | 'MEANING' | 'VALUE' | 'PERSONAL' | 'RELATIONAL'
-export type ActivationChannel = 'VIDEO' | 'GROUP_CHAT'
-export type InteractionScope = 'SELF' | 'GROUP' | 'SPECIFIC_MEMBER'
-export type PreferenceLeakRisk = 'NONE' | 'LOW' | 'HIGH'
-export type MissionPeriod = 'MORNING' | 'AFTERNOON'
-
-export interface MissionEligibility {
-  day_number: number // 1~3
-  period: MissionPeriod
-}
-
-export interface AdminMissionRevision {
-  id: number
-  revision_number: number
-  description: string
-  disclosure_depth: MissionAttributeLevel
-  mission_goal: MissionGoal
-  activation_channel: ActivationChannel
-  interaction_scope: InteractionScope
-  participation_burden: MissionAttributeLevel
-  privacy_risk: MissionAttributeLevel
-  preference_leak_risk: PreferenceLeakRisk
-  capture_difficulty: MissionAttributeLevel
-  semantic_cluster: string
-  base_quality_score: number
-  is_fallback: boolean
-  eligibilities: MissionEligibility[]
-  created_at: string
-}
-
-export interface AdminMission {
-  id: number
-  active_revision_id: number
-  active: boolean
-  active_revision: AdminMissionRevision
-}
-
-// 생성 · revision 발행 공통 바디 (13필드)
-export interface MissionRevisionBody {
-  description: string
-  disclosure_depth: MissionAttributeLevel
-  mission_goal: MissionGoal
-  activation_channel: ActivationChannel
-  interaction_scope: InteractionScope
-  participation_burden: MissionAttributeLevel
-  privacy_risk: MissionAttributeLevel
-  preference_leak_risk: PreferenceLeakRisk
-  capture_difficulty: MissionAttributeLevel
-  semantic_cluster: string
-  base_quality_score: number
-  is_fallback: boolean
-  eligibilities: MissionEligibility[]
-}
-
 // ===== 데모 접근 코드 (SUPER 전용) =====
 export interface DemoAccessCode {
   code: string | null
@@ -187,23 +131,6 @@ export interface RoomDetail {
   members: RoomMember[]
 }
 
-export type OperatorMissionStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELLED'
-export interface OperatorMissionTemplate { template_id: string; day_number: number; position: number; content: string; category: string }
-export interface MissionImage { id: number; url: string; width: number; height: number }
-export interface OperatorMission {
-  id: number; room_id: number; template_id: string; content: string; notify_participants: boolean; image_id: number | null; image: MissionImage | null
-  scheduled_at: string; immediate: boolean; status: OperatorMissionStatus; request_key: string
-  message_id: number | null; sent_at: string | null; fail_reason: string | null
-  delete_requested_at: string | null; delete_processed_at: string | null
-}
-export interface OperatorMissionPage {
-  room_id: number; room_status: RoomStatus; starts_at: string | null
-  final_selection_opens_at: string | null; server_now: string
-  templates: OperatorMissionTemplate[]; items: OperatorMission[]; next_cursor: number | null
-}
-export interface OperatorMissionInput {
-  request_key: string; template_id: string; content: string; notify_participants: boolean; scheduled_at: string | null; image_id?: number | null
-}
 export type RoomActivityType = 'VIDEO' | 'CHAT' | 'REACTION' | 'QUESTION'
 export interface ActivityParticipant { user_id: number; name: string }
 export interface RoomSelection {
@@ -249,13 +176,6 @@ export interface RoomActivitySummary {
 }
 
 // 방 생성·초대코드 (초대코드 MVP)
-// 방별 미션 슬롯 (BE #361) — total_days × 2(오전/오후)개 필수
-export interface RoomMissionSlot {
-  day_number: number
-  period: MissionPeriod
-  opens_at: string
-  closes_at: string
-}
 export interface CreateRoomBody {
   is_test: boolean
   starts_at: string
@@ -266,8 +186,7 @@ export interface CreateRoomBody {
   total_days: number
   max_uses?: number | null
   invite_expires_at?: string | null
-  mission_enabled: boolean // BE #450 필수였음. #474 부터 새 방 자동 미션이 없어 항상 false
-  chat_schedule?: ScheduleItemBody[]
+  missions?: RoomMissionBody[] // 최대 100개. 서버 기본 미션 없음
 }
 export interface RoomCreated {
   is_test: boolean
@@ -283,33 +202,84 @@ export interface RoomInvite {
   expires_at: string | null
   created_by: string
 }
-// 방 편성 (채팅 P0 F3/F4, BE #457)
+// 방 미션·안내 (BE #482 · #484 · #486). 예전 편성 한 줄 = 미션 하나 + 안내 하나
 export type RevealField = 'MBTI' | 'INTO_NOW' | 'AGE' | 'DEPARTMENT'
-export type ScheduleStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELED' | 'FAILED'
-export interface RoomScheduleItem {
-  id: number
+export type MissionType = 'ANNOUNCEMENT' | 'PROFILE_REVEAL' | 'RECORDING'
+export type MissionStatus = 'SCHEDULED' | 'OPEN' | 'CLOSED' | 'CANCELED'
+export type AnnouncementType = 'START' | 'REMINDER' | 'RESULT'
+export type AnnouncementStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELED' | 'FAILED'
+// url 은 1시간짜리 서명 주소(미리보기용). 변하지 않는 건 key
+export interface MissionImage {
+  key: string
+  url: string
+  width: number
+  height: number
+}
+// type 에 따라 한쪽만 온다: ANNOUNCEMENT·RECORDING = content(RECORDING 은 촬영 주제), PROFILE_REVEAL = reveal_fields
+export interface MissionDetails {
+  content?: string | null
+  reveal_fields?: RevealField[] | null
+}
+export interface RoomMission {
+  mission_id: number
+  room_id: number
+  type: MissionType
+  details: MissionDetails
+  image: MissionImage | null
+  opens_at: string
+  closes_at: string | null // null = 방 종료까지
+  effective_closes_at: string | null
+  status: MissionStatus
+  interaction_type: string
+  requires_response: boolean
+  can_respond: boolean
+}
+export interface RoomMissionPage {
+  missions: RoomMission[]
+  next_cursor: number | null
+}
+export interface MissionAnnouncement {
+  announcement_id: number
+  mission_id: number
+  room_id: number
+  announcement_type: AnnouncementType
   run_at: string
-  day: number | null
-  reveal_fields: RevealField[] | null
-  message_content: string | null
+  content: string | null
   push: boolean
   push_title: string | null
   push_body: string | null
-  status: ScheduleStatus
+  status: AnnouncementStatus
   fail_reason: string | null
   sent_message_id: number | null
+  message_deleted_at: string | null // 보낸 글 삭제 시각
+  legacy_schedule_item_id: number | null
   created_by: string | null
+  updated_by: string | null
   sent_at: string | null
-  message_deleted_at?: string | null // 보낸 운영 글 삭제 시각 (옛 응답엔 없음)
+  created_at: string | null
+  updated_at: string | null
 }
-// 방 생성 chat_schedule[] 한 줄 · 편성 행 추가/수정 공통 바디 (run_at null = 지금)
-export interface ScheduleItemBody {
-  run_at: string | null
-  reveal_fields: RevealField[]
-  message_content: string | null
+export interface AnnouncementPage {
+  announcements: MissionAnnouncement[]
+  next_cursor: number | null
+}
+// 안내 추가·수정 공통 바디 (PUT 은 전체 교체)
+export interface AnnouncementBody {
+  announcement_type: AnnouncementType
+  run_at: string
+  content: string | null
   push: boolean
   push_title: string | null
   push_body: string | null
+}
+// 미션 생성·수정 공통 바디 (PUT 은 전체 교체. announcement 는 생성 때만)
+export interface RoomMissionBody {
+  type: MissionType
+  details: MissionDetails
+  image_key: string | null
+  opens_at: string
+  closes_at: string | null
+  announcement?: AnnouncementBody
 }
 
 export interface ReissueInviteBody {
@@ -338,7 +308,7 @@ export interface UserListItem {
 export interface UserPayment {
   purchase_id: number
   store_product_id: string
-  coin_amount: number
+  ticket_amount: number
   store: IapStore
   status: IapPurchaseStatus
   purchased_at: string
@@ -374,7 +344,7 @@ export interface UserDetail {
     affiliation: string | null
     height: number | null
   } | null
-  coin: { paid: number; reward: number; total: number }
+  ticket: { balance: number }
   payments: UserPayment[]
   participations: {
     room_id: number
