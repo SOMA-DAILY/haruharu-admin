@@ -57,6 +57,7 @@ export const dashboardApi = {
 
 // ===== 세션(방) (#191) =====
 export interface RoomListQuery {
+  isTest?: boolean
   status?: RoomStatus
   scheduledDate?: string // YYYY-MM-DD (쿼리 파라미터는 camelCase)
   page?: number
@@ -77,6 +78,8 @@ export const roomsApi = {
     get<RoomActivitySummary>(`/rooms/${roomId}/activity/summary`, q),
   list: (q: RoomListQuery) => get<Paged<RoomListItem>>('/rooms', q),
   detail: (roomId: number) => get<RoomDetail>(`/rooms/${roomId}`),
+  updateType: (roomId: number, isTest: boolean) =>
+    patch<{ room_id: number; is_test: boolean }>(`/rooms/${roomId}/type`, { is_test: isTest }),
   // 쓰기 (SUPER·OPERATOR)
   create: (body: CreateRoomBody) => post<RoomCreated>('/rooms', body),
   invites: (roomId: number) => get<RoomInvite[]>(`/rooms/${roomId}/invites`),
