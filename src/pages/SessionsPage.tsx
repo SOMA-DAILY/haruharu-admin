@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, Table, Select, DatePicker, Space, Button, Tooltip, Typography } from 'antd'
+import { Card, Table, Select, DatePicker, Space, Button, Alert, Empty, Tooltip, Typography } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
@@ -86,12 +86,14 @@ export default function SessionsPage() {
   const { me } = useAuth()
   const canWrite = me?.role === 'SUPER' || me?.role === 'OPERATOR'
   const [status, setStatus] = useState<RoomStatus>()
+  const [operationalOnly, setOperationalOnly] = useState(false)
   const [date, setDate] = useState<Dayjs | null>(null)
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
   const [createOpen, setCreateOpen] = useState(false)
 
-  const { data, isLoading } = useRooms({
+  const { data, isLoading, isError } = useRooms({
+    isTest: operationalOnly ? false : undefined,
     status,
     scheduledDate: date ? date.format('YYYY-MM-DD') : undefined,
     page,
@@ -113,7 +115,7 @@ export default function SessionsPage() {
       />
       <CreateRoomModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <Card>
-        <Space style={{ marginBottom: 16 }}>
+        <Space wrap style={{ marginBottom: 16 }}>
           <Select
             placeholder="상태"
             allowClear
@@ -133,15 +135,28 @@ export default function SessionsPage() {
               setPage(0)
             }}
           />
+          <Button
+            type={operationalOnly ? 'primary' : 'default'}
+            aria-pressed={operationalOnly}
+            onClick={() => {
+              setOperationalOnly((value) => !value)
+              setPage(0)
+            }}
+          >
+            실제 운영 방
+          </Button>
         </Space>
+        {isError && <Alert type="error" showIcon title="방 목록을 불러오지 못했습니다." style={{ marginBottom: 16 }} />}
         <Table<RoomListItem>
           rowKey="room_id"
           loading={isLoading}
           columns={columns}
           dataSource={data?.content}
+          scroll={{ x: 760 }}
+          locale={{ emptyText: <Empty description="조건에 맞는 방이 없습니다." /> }}
           onRow={(r) => ({ onClick: () => navigate(`/sessions/${r.room_id}`), style: { cursor: 'pointer' } })}
           pagination={{
-            current: (data?.page.page ?? 0) + 1,
+            current: page + 1,
             pageSize: size,
             total: data?.page.total_elements ?? 0,
             showSizeChanger: true,

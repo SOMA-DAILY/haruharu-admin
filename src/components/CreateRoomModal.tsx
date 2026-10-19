@@ -23,7 +23,8 @@ import { useNavigate } from 'react-router-dom'
 import type { Dayjs } from 'dayjs'
 import { useCohorts, useCreateRoom } from '../api/queries'
 import { ApiError } from '../api/client'
-import type { MissionImage, RevealField, RoomMissionBody } from '../api/types'
+import { RoomTypeTag } from './StatusTag'
+import type { MissionImage, RevealField, RoomMissionBody, RoomCreated } from '../api/types'
 import MissionImagePicker from './MissionImagePicker'
 import {
   CHAT_SCHEDULE_DEFAULTS,
@@ -41,6 +42,7 @@ import {
 const fmt = (d: Dayjs) => d.format('YYYY-MM-DDTHH:mm:ss')
 
 type FormValues = {
+  room_type: 'OPERATIONAL' | 'TEST'
   starts_at: Dayjs
   final_selection_opens_at: Dayjs
   final_selection_closes_at: Dayjs
@@ -329,7 +331,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
   const cohortOptions = (cohorts.data ?? [])
     .filter((c) => c.status === 'DRAFT' || c.status === 'OPEN')
     .map((c) => ({ value: c.id, label: `${c.name} (${c.status === 'OPEN' ? '모집 중' : '초안'})` }))
-  const [created, setCreated] = useState<{ room_id: number; code: string } | null>(null)
+  const [created, setCreated] = useState<RoomCreated | null>(null)
 
   // 채팅 편성: 방 시작/최종선택 오픈이 바뀌면 손 안 댄 기본 줄만 재계산
   const startsAt: Dayjs | undefined = AntForm.useWatch('starts_at', form)
@@ -387,6 +389,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
     })
     try {
       const res = await createMut.mutateAsync({
+        is_test: v.room_type === 'TEST',
         starts_at: fmt(v.starts_at),
         final_selection_opens_at: fmt(v.final_selection_opens_at),
         final_selection_closes_at: fmt(v.final_selection_closes_at),
@@ -471,11 +474,15 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
                 {created.code}
               </Typography.Title>
               <div style={{ color: '#9aa0a8', fontSize: 12 }}>방 ID #{created.room_id}</div>
+              <RoomTypeTag isTest={created.is_test} />
             </div>
           }
         />
       ) : (
-        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ total_days: 3, max_uses: 6 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ room_type: 'OPERATIONAL', total_days: 3, max_uses: 6 }}>
+          <Form.Item name="room_type" label="방 구분" rules={[{ required: true, message: '방 구분을 선택하세요.' }]}>
+            <Select options={[{ value: 'OPERATIONAL', label: '운영방' }, { value: 'TEST', label: '테스트방' }]} />
+          </Form.Item>
           <Divider titlePlacement="start" plain>
             기수
           </Divider>

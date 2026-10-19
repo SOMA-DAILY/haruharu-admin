@@ -91,6 +91,7 @@ export interface DashboardMetrics {
 // ===== 세션(방) =====
 export interface RoomListItem {
   room_id: number
+  is_test: boolean
   status: RoomStatus
   scheduled_date: string
   current_day: number
@@ -124,6 +125,7 @@ export interface RoomMember {
 
 export interface RoomDetail {
   room_id: number
+  is_test: boolean
   status: RoomStatus
   scheduled_date: string
   total_days: number
@@ -192,6 +194,7 @@ export interface RoomActivitySummary {
 
 // 방 생성·초대코드 (초대코드 MVP)
 export interface CreateRoomBody {
+  is_test: boolean
   starts_at: string
   final_selection_opens_at: string
   final_selection_closes_at: string
@@ -208,6 +211,7 @@ export interface CreateRoomBody {
   female_capacity?: number | null
 }
 export interface RoomCreated {
+  is_test: boolean
   room_id: number
   code: string
 }
