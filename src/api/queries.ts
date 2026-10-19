@@ -53,6 +53,17 @@ export const useRoomInvites = (roomId: number, enabled = true) =>
   })
 
 // 방 쓰기 mutation
+export const useUpdateRoomType = (roomId: number) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (isTest: boolean) => roomsApi.updateType(roomId, isTest),
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: ['room', roomId] }),
+      qc.invalidateQueries({ queryKey: ['rooms'] }),
+    ]),
+  })
+}
+
 export const useCreateRoom = () => {
   const qc = useQueryClient()
   return useMutation({

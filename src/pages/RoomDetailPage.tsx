@@ -21,9 +21,9 @@ import type { ColumnsType } from 'antd/es/table'
 import { useNavigate, useParams } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
-import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender } from '../api/queries'
+import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType } from '../api/queries'
 import { useAuth } from '../auth/AuthContext'
-import { RoomStatusTag, RoomInviteStatusTag } from '../components/StatusTag'
+import { RoomStatusTag, RoomInviteStatusTag, RoomTypeTag } from '../components/StatusTag'
 import { ApiError } from '../api/client'
 import type { RoomMember, RoomInvite, Gender } from '../api/types'
 import RoomActivityPanel from '../components/RoomActivityPanel'
@@ -137,6 +137,7 @@ export default function RoomDetailPage() {
   const { data, isLoading, isError } = useRoom(roomId)
   const cancelMut = useCancelRoom(roomId)
   const assignMut = useAssignGender(roomId)
+  const typeMut = useUpdateRoomType(roomId)
 
   if (isError) return <Alert type="error" message="방 정보를 찾을 수 없습니다." showIcon />
 
@@ -165,6 +166,15 @@ export default function RoomDetailPage() {
       message.success('성별을 부여했습니다.')
     } catch (e) {
       message.error(e instanceof ApiError ? e.message : '성별 부여에 실패했습니다.')
+    }
+  }
+
+  const changeType = async (value: string) => {
+    try {
+      await typeMut.mutateAsync(value === 'TEST')
+      message.success('방 구분을 변경했습니다.')
+    } catch (e) {
+      message.error(e instanceof ApiError && e.code !== 'NETWORK' ? e.message : '방 구분 변경에 실패했습니다.')
     }
   }
 
@@ -225,6 +235,20 @@ export default function RoomDetailPage() {
           <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <Card>
               <Descriptions column={3} bordered size="small">
+                <Descriptions.Item label="방 구분" span={3}>
+                  {canWrite && typeof data.is_test === 'boolean' ? (
+                    <Select
+                      aria-label="방 구분 변경"
+                      size="small"
+                      style={{ width: 120 }}
+                      value={data.is_test ? 'TEST' : 'OPERATIONAL'}
+                      disabled={typeMut.isPending}
+                      loading={typeMut.isPending}
+                      onChange={changeType}
+                      options={[{ value: 'OPERATIONAL', label: '운영방' }, { value: 'TEST', label: '테스트방' }]}
+                    />
+                  ) : <RoomTypeTag isTest={data.is_test} />}
+                </Descriptions.Item>
                 <Descriptions.Item label="상태">
                   <RoomStatusTag status={data.status} />
                 </Descriptions.Item>
