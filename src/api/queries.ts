@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
+import { appUpdatePolicyApi, adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
@@ -8,6 +8,7 @@ import type {
   UserListQuery,
 } from './endpoints'
 import type {
+  UpdateAppUpdatePolicyBody,
   AnnouncementBody,
   AssignGenderBody,
   CreateAdminAccountBody,
@@ -223,5 +224,18 @@ export const useSetDemoCode = () => {
   return useMutation({
     mutationFn: (body: SetDemoCodeBody) => demoApi.setCode(body),
     onSuccess: (data) => qc.setQueryData(['demo', 'access-code'], data),
+  })
+}
+
+export const useAppUpdatePolicy = () => useQuery({ queryKey: ['app-update-policy'], queryFn: appUpdatePolicyApi.get })
+export const useAppUpdatePolicyHistory = () => useQuery({ queryKey: ['app-update-policy-history'], queryFn: appUpdatePolicyApi.history })
+export function useUpdateAppUpdatePolicy() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: UpdateAppUpdatePolicyBody) => appUpdatePolicyApi.update(body),
+    onSuccess: (data) => {
+      qc.setQueryData(['app-update-policy'], data)
+      void qc.invalidateQueries({ queryKey: ['app-update-policy-history'] })
+    },
   })
 }

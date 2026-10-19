@@ -353,3 +353,27 @@ export interface UserDetail {
     joined_at: string
   }[]
 }
+
+// 앱 최소 지원 버전 (#39)
+export interface AppUpdatePolicy {
+  ios_minimum_version: string | null
+  android_minimum_version: string | null
+  revision: number
+  updated_by: number | null
+  updated_at: string | null
+}
+export interface UpdateAppUpdatePolicyBody {
+  ios_minimum_version: string | null
+  android_minimum_version: string | null
+  revision: number
+}
+export interface AppUpdatePolicyHistory {
+  id: number
+  revision: number
+  previous_ios_minimum_version: string | null
+  previous_android_minimum_version: string | null
+  ios_minimum_version: string | null
+  android_minimum_version: string | null
+  changed_by: number
+  changed_at: string
+}
