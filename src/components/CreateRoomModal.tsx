@@ -21,7 +21,7 @@ import { DeleteOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/i
 import { Form as AntForm } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import type { Dayjs } from 'dayjs'
-import { useCreateRoom } from '../api/queries'
+import { useCohorts, useCreateRoom } from '../api/queries'
 import { ApiError } from '../api/client'
 import { RoomTypeTag } from './StatusTag'
 import type { MissionImage, RevealField, RoomMissionBody, RoomCreated } from '../api/types'
@@ -51,7 +51,13 @@ type FormValues = {
   total_days: number
   max_uses?: number
   invite_expires_at?: Dayjs
+  cohort_id?: number
+  name?: string
+  male_capacity?: number
+  female_capacity?: number
 }
+
+const COHORT_FIELDS = ['cohort_id', 'name', 'male_capacity', 'female_capacity'] as const
 
 // ===== 채팅 편성 (E0) =====
 // rule 있는 줄 = 기본 편성 줄(시각 자동 계산, 공개 항목 고정), 없는 줄 = [+ 글 추가] 로 넣은 줄
@@ -320,6 +326,11 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
   const navigate = useNavigate()
   const [form] = Form.useForm<FormValues>()
   const createMut = useCreateRoom()
+  // 방을 만들 수 있는 기수는 초안·공개 중뿐 (BE #513)
+  const cohorts = useCohorts()
+  const cohortOptions = (cohorts.data ?? [])
+    .filter((c) => c.status === 'DRAFT' || c.status === 'OPEN')
+    .map((c) => ({ value: c.id, label: `${c.name} (${c.status === 'OPEN' ? '모집 중' : '초안'})` }))
   const [created, setCreated] = useState<RoomCreated | null>(null)
 
   // 채팅 편성: 방 시작/최종선택 오픈이 바뀌면 손 안 댄 기본 줄만 재계산
@@ -388,6 +399,10 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
         max_uses: v.max_uses ?? null,
         invite_expires_at: v.invite_expires_at ? fmt(v.invite_expires_at) : null,
         missions,
+        cohort_id: v.cohort_id ?? null,
+        name: v.name?.trim() || null,
+        male_capacity: v.male_capacity ?? null,
+        female_capacity: v.female_capacity ?? null,
       })
       setCreated(res)
     } catch (e) {
@@ -398,6 +413,13 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
           const m = /^missions\[(\d+)\]/.exec(field)
           if (m && Number(m[1]) < scheduleRows.length && !rowErrors.has(Number(m[1]))) rowErrors.set(Number(m[1]), msg)
         }
+      }
+      const cohortErrors = e instanceof ApiError && e.fieldErrors
+        ? COHORT_FIELDS.filter((f) => e.fieldErrors![f]).map((f) => ({ name: f, errors: [e.fieldErrors![f]] }))
+        : []
+      if (cohortErrors.length > 0) {
+        form.setFields(cohortErrors)
+        return
       }
       if (rowErrors.size > 0) {
         setScheduleRows((prev) => prev.map((r, i) => (rowErrors.has(i) ? { ...r, error: rowErrors.get(i) } : r)))
@@ -461,6 +483,23 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
           <Form.Item name="room_type" label="방 구분" rules={[{ required: true, message: '방 구분을 선택하세요.' }]}>
             <Select options={[{ value: 'OPERATIONAL', label: '운영방' }, { value: 'TEST', label: '테스트방' }]} />
           </Form.Item>
+          <Divider titlePlacement="start" plain>
+            기수
+          </Divider>
+          <Form.Item name="cohort_id" label="기수 (비우면 웹 전용 방)">
+            <Select allowClear placeholder="기수 선택" loading={cohorts.isLoading} options={cohortOptions} />
+          </Form.Item>
+          <Form.Item name="name" label="방 이름" rules={[{ max: 50, message: '50자 이하' }]}>
+            <Input placeholder="서울 6기 1조" />
+          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item name="male_capacity" label="남성 정원">
+              <InputNumber min={1} style={{ width: '100%' }} placeholder="3" />
+            </Form.Item>
+            <Form.Item name="female_capacity" label="여성 정원">
+              <InputNumber min={1} style={{ width: '100%' }} placeholder="3" />
+            </Form.Item>
+          </div>
           <Divider titlePlacement="start" plain>
             일정
           </Divider>

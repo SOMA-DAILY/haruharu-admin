@@ -21,7 +21,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { useNavigate, useParams } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
-import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType } from '../api/queries'
+import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType, useCohorts } from '../api/queries'
 import { useAuth } from '../auth/AuthContext'
 import { RoomStatusTag, RoomInviteStatusTag, RoomTypeTag } from '../components/StatusTag'
 import { ApiError } from '../api/client'
@@ -137,6 +137,7 @@ export default function RoomDetailPage() {
   const cancelMut = useCancelRoom(roomId)
   const assignMut = useAssignGender(roomId)
   const typeMut = useUpdateRoomType(roomId)
+  const cohorts = useCohorts()
 
   if (isError) return <Alert type="error" message="방 정보를 찾을 수 없습니다." showIcon />
 
@@ -209,6 +210,23 @@ export default function RoomDetailPage() {
     },
     { title: '나이', dataIndex: 'age', width: 70, render: (v: number | null) => v ?? '-' },
     { title: '지역', dataIndex: 'region', width: 100, render: (v: string | null) => v ?? '-' },
+    {
+      title: '입장 경로',
+      dataIndex: 'entry_path',
+      width: 90,
+      render: (v?: string) => (v === 'APPLICATION' ? <Tag color="blue">신청</Tag> : v === 'INVITE' ? <Tag>코드</Tag> : '-'),
+    },
+    {
+      title: '본인 확인',
+      dataIndex: 'identity_verified',
+      width: 90,
+      render: (v?: boolean) => (v === undefined ? '-' : v ? <Tag color="green">완료</Tag> : <Tag>안 함</Tag>),
+    },
+    {
+      title: '학교 / 학과',
+      key: 'school',
+      render: (_, r) => (r.school || r.department ? [r.school, r.department].filter(Boolean).join(' / ') : '-'),
+    },
     { title: '참여시각', dataIndex: 'joined_at', render: (v: string) => dayjs(v).format('MM/DD HH:mm') },
   ]
 
@@ -261,6 +279,17 @@ export default function RoomDetailPage() {
                 <Descriptions.Item label="시작">
                   {data.started_at ? dayjs(data.started_at).format('YYYY-MM-DD HH:mm') : '-'}
                 </Descriptions.Item>
+                {data.cohort_id != null && (
+                  <>
+                    <Descriptions.Item label="기수 / 방 이름">
+                      {cohorts.data?.find((c) => c.id === data.cohort_id)?.name ?? `#${data.cohort_id}`} / {data.name ?? '-'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="성별 정원">
+                      여 {data.female_capacity ?? '-'} / 남 {data.male_capacity ?? '-'}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="코드로 들어온 인원">{data.invite_member_count ?? '-'}명</Descriptions.Item>
+                  </>
+                )}
                 <Descriptions.Item label="종료">
                   {data.ended_at ? dayjs(data.ended_at).format('YYYY-MM-DD HH:mm') : '-'}
                 </Descriptions.Item>

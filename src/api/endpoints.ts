@@ -5,6 +5,12 @@ import type {
   AnnouncementBody,
   AnnouncementPage,
   AssignGenderBody,
+  AssignedMember,
+  Cohort,
+  CohortApplication,
+  CohortApplicationStatus,
+  Gender,
+  RecruitTrack,
   CreateAdminAccountBody,
   CreateRoomBody,
   DemoAccessCode,
@@ -60,6 +66,7 @@ export interface RoomListQuery {
   isTest?: boolean
   status?: RoomStatus
   scheduledDate?: string // YYYY-MM-DD (쿼리 파라미터는 camelCase)
+  cohortId?: number // BE #529
   page?: number
   size?: number
 }
@@ -162,4 +169,23 @@ export const adminsApi = {
 export const demoApi = {
   getCode: () => get<DemoAccessCode>('/demo/access-code'),
   setCode: (body: SetDemoCodeBody) => put<DemoAccessCode>('/demo/access-code', body),
+}
+
+// ===== 모집 트랙·기수·앱 신청 (BE #510 · #515 · #516. 신청자 API 는 SUPER·OPERATOR) =====
+export interface CohortApplicationQuery {
+  status?: CohortApplicationStatus
+  gender?: Gender
+  page?: number
+  size?: number
+}
+export const cohortsApi = {
+  tracks: () => get<RecruitTrack[]>('/recruit-tracks'),
+  list: () => get<Cohort[]>('/cohorts'),
+  applications: (cohortId: number, q: CohortApplicationQuery) =>
+    get<Paged<CohortApplication>>(`/cohorts/${cohortId}/applications`, q),
+  updateMemo: (applicationId: number, memo: string | null) =>
+    patch<CohortApplication>(`/cohort-applications/${applicationId}/memo`, { memo }),
+  approve: (applicationId: number) => post<CohortApplication>(`/cohort-applications/${applicationId}/approve`),
+  assign: (roomId: number, applicationIds: number[]) =>
+    post<AssignedMember[]>(`/rooms/${roomId}/applications`, { application_ids: applicationIds }),
 }

@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
+import { adminsApi, cohortsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
 import type {
+  CohortApplicationQuery,
   IapPurchaseQuery,
   MetricsQuery,
   RoomListQuery,
@@ -225,3 +226,28 @@ export const useSetDemoCode = () => {
     onSuccess: (data) => qc.setQueryData(['demo', 'access-code'], data),
   })
 }
+
+// ===== 모집 트랙·기수·앱 신청 =====
+export const useRecruitTracks = () => useQuery({ queryKey: ['recruit-tracks'], queryFn: cohortsApi.tracks })
+export const useCohorts = () => useQuery({ queryKey: ['cohorts'], queryFn: cohortsApi.list })
+export const useCohortApplications = (cohortId: number | undefined, q: CohortApplicationQuery, enabled = true) =>
+  useQuery({
+    queryKey: ['cohort-applications', cohortId, q],
+    queryFn: () => cohortsApi.applications(cohortId!, q),
+    enabled: !!cohortId && enabled,
+  })
+const useCohortWrite = <A,>(fn: (a: A) => Promise<unknown>) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cohort-applications'] })
+      qc.invalidateQueries({ queryKey: ['rooms'] })
+    },
+  })
+}
+export const useUpdateApplicationMemo = () =>
+  useCohortWrite((a: { applicationId: number; memo: string | null }) => cohortsApi.updateMemo(a.applicationId, a.memo))
+export const useApproveApplication = () => useCohortWrite((applicationId: number) => cohortsApi.approve(applicationId))
+export const useAssignApplications = () =>
+  useCohortWrite((a: { roomId: number; applicationIds: number[] }) => cohortsApi.assign(a.roomId, a.applicationIds))

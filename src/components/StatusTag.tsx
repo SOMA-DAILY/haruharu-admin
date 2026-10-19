@@ -11,6 +11,7 @@ import type {
   AnnouncementType,
   MissionStatus,
   MissionType,
+  CohortApplicationStatus,
 } from '../api/types'
 import { ANNOUNCEMENT_TYPE_LABEL, MISSION_TYPE_LABEL } from '../config/chatScheduleDefaults'
 
@@ -106,4 +107,18 @@ export function MissionTypeTag({ type }: { type: MissionType }) {
 }
 export function AnnouncementTypeTag({ type }: { type: AnnouncementType }) {
   return <Tag>{ANNOUNCEMENT_TYPE_LABEL[type] ?? type}</Tag>
+}
+
+const COHORT_APPLICATION_MAP: Record<CohortApplicationStatus, { color: string; label: string }> = {
+  IDENTITY_PENDING: { color: 'orange', label: 'PASS 대기' },
+  NEEDS_REVIEW: { color: 'red', label: '확인 필요' },
+  QUEUED: { color: 'blue', label: '편성 대기' },
+  ASSIGNED: { color: 'green', label: '방 배정' },
+  COMPLETED: { color: 'default', label: '완료' },
+  CANCELLED: { color: 'default', label: '취소' },
+  NOT_ASSIGNED: { color: 'default', label: '못 넣음' },
+}
+export function CohortApplicationStatusTag({ status }: { status: CohortApplicationStatus }) {
+  const v = COHORT_APPLICATION_MAP[status]
+  return <Tag color={v.color}>{v.label}</Tag>
 }
