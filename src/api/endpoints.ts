@@ -75,7 +75,8 @@ export interface RoomActivityQuery {
   order?: 'asc' | 'desc'
 }
 export const roomsApi = {
-  activities: (roomId: number, q: RoomActivityQuery) => get<Paged<RoomActivity>>(`/rooms/${roomId}/activities`, q),
+  activities: async (roomId: number, q: RoomActivityQuery, signal?: AbortSignal) =>
+    (await http.get<Paged<RoomActivity>>(`/rooms/${roomId}/activities`, { params: q, signal })).data,
   selections: (roomId: number) => get<import('./types').RoomSelection[]>(`/rooms/${roomId}/selections`),
   activitySummary: (roomId: number, q: Pick<RoomActivityQuery, 'day' | 'userId'>) =>
     get<RoomActivitySummary>(`/rooms/${roomId}/activity/summary`, q),
