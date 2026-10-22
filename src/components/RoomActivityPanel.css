@@ -159,3 +159,6 @@
 .activity-photo-preview.is-blurred .ant-image-preview-img { filter: blur(var(--activity-photo-blur-radius, 96px)); }
 .activity-photo-media { display: contents; }
 .activity-photo-preview-toolbar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; max-width: calc(100vw - 32px); }
+
+.activity-members { margin-top: 20px; }
+.activity-members-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
