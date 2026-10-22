@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { Alert, Avatar, Button, Card, Collapse, Empty, Image, Modal, Segmented, Select, Skeleton, Space, Table, Tag, Typography, theme } from 'antd'
+import { Alert, Avatar, Button, Card, Collapse, Empty, Image, Modal, Segmented, Select, Skeleton, Space, Switch, Table, Tag, Typography, theme } from 'antd'
 import { HeartOutlined, MessageOutlined, PlayCircleOutlined, QuestionCircleOutlined, ReloadOutlined, VideoCameraOutlined, FullscreenOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -21,13 +21,23 @@ function mediaUrl(value: string | null) {
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : undefined } catch { return undefined }
 }
 
-function ParticipantPhoto({ url, name }: { url?: string | null; name: string }) {
+function PhotoBlurSwitch({ checked, onChange, overlay = false }: { checked: boolean; onChange: (value: boolean) => void; overlay?: boolean }) {
+  const { token } = theme.useToken()
+  return <Space size={8} className="activity-photo-blur-control"
+    style={overlay ? { color: token.colorWhite, background: token.colorBgMask, borderRadius: token.borderRadiusLG, padding: '10px 14px' } : undefined}
+    onClick={event => event.stopPropagation()}
+    onKeyDown={event => { if (['Enter', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) event.stopPropagation() }}>
+    <span>사진 블러</span><Switch size="small" aria-label="프로필 사진 블러" checkedChildren="ON" unCheckedChildren="OFF" checked={checked} onChange={onChange} />
+  </Space>
+}
+
+function ParticipantPhoto({ url, name, blurred, onBlurChange }: { url?: string | null; name: string; blurred: boolean; onBlurChange: (value: boolean) => void }) {
   const [failed, setFailed] = useState(false)
   const src = mediaUrl(url ?? null)
   if (!src || failed) return <span className="activity-member-photo-empty" aria-label={failed ? '사진을 불러오지 못했습니다' : '프로필 사진 없음'} title={failed ? '사진을 불러오지 못했습니다' : '프로필 사진 없음'}>—</span>
   return <Image src={src} alt={`${name} 프로필 사진`} aria-label={`${name} 프로필 사진 확대`} width={44} height={44}
-    classNames={{ root: 'activity-member-photo' }} loading="lazy" onError={() => setFailed(true)}
-    preview={{ cover: <FullscreenOutlined /> }} />
+    classNames={{ root: `activity-member-photo${blurred ? ' is-blurred' : ''}`, popup: { root: `activity-photo-preview${blurred ? ' is-blurred' : ''}` } }} loading="lazy" onError={() => setFailed(true)}
+    preview={{ cover: <FullscreenOutlined />, actionsRender: actions => <div className="activity-photo-preview-toolbar">{actions}<PhotoBlurSwitch checked={blurred} onChange={onBlurChange} overlay /></div> }} />
 }
 
 function VideoThumbnail({ video, onOpen }: { video: ActivityVideo; onOpen: () => void }) {
@@ -112,6 +122,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
   const [type, setType] = useState<RoomActivityType | undefined>('VIDEO')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [video, setVideo] = useState<ActivityVideo | null>(null)
+  const [blurPhotos, setBlurPhotos] = useState(false)
   const snapshot = useQuery({
     queryKey: ['room', room.room_id, 'activities', 'insights', { day }],
     queryFn: ({ signal }) => fetchRoomActivitySnapshot(room.room_id, day, signal),
@@ -188,7 +199,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
     { title: '참여자', dataIndex: 'name', render: (name: string, m: RoomActivitySummary['members'][number]) => <Button type="link" onClick={() => setUserId(m.user_id)}>{name}</Button> },
     { title: '사진', key: 'profile_image', width: 76, render: (_: unknown, m: RoomActivitySummary['members'][number]) => {
       const url = room.members.find(member => member.user_id === m.user_id)?.profile_image_url
-      return <ParticipantPhoto key={url ?? 'no-photo'} url={url} name={m.name} />
+      return <ParticipantPhoto key={url ?? 'no-photo'} url={url} name={m.name} blurred={blurPhotos} onBlurChange={setBlurPhotos} />
     } },
     { title: '영상', dataIndex: 'videos' }, { title: '채팅', dataIndex: 'chats' },
     { title: '보낸 반응', dataIndex: 'reactions_sent' }, { title: '받은 반응', dataIndex: 'reactions_received' },
@@ -240,7 +251,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
       </div>}
     </Card>
     <Card className="activity-member-table" size="small">
-      <Collapse ghost items={[{ key: 'members', label: '참여자별 활동 현황', children: summary.isError ? <Text type="secondary">요약을 다시 불러와 주세요.</Text> : <>
+      <Collapse ghost items={[{ key: 'members', label: '참여자별 활동 현황', extra: <PhotoBlurSwitch checked={blurPhotos} onChange={setBlurPhotos} />, children: summary.isError ? <Text type="secondary">요약을 다시 불러와 주세요.</Text> : <>
         {dailyUploads.some(q => q.isError) && <Alert type="error" showIcon title="일별 업로드 수를 불러오지 못했습니다." action={<Button onClick={() => dailyUploads.forEach(q => { void q.refetch() })}>다시 시도</Button>} />}
         <Typography.Paragraph type="secondary">일차별 업로드 열은 일차 필터와 관계없이 각 일차 전체를 표시합니다. 하단 총계·평균은 방 전체 참여자 {room.members.length}명 기준이며, 업로드 0건인 참여자도 포함합니다. 진행 중인 일차는 현재까지의 수치입니다.</Typography.Paragraph>
         <Table rowKey="user_id" size="small" loading={summary.isLoading} columns={columns} dataSource={summary.data?.members} pagination={false} scroll={{ x: 716 + uploadDays.length * 115 }} locale={{ emptyText: '참여자가 없습니다.' }}

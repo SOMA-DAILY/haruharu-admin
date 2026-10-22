@@ -160,3 +160,8 @@
 .activity-member-photo .ant-image-img { object-fit: cover; }
 .activity-member-photo:focus-visible { outline: 2px solid var(--activity-primary); outline-offset: 3px; }
 .activity-member-photo-empty { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; color: var(--activity-muted); }
+
+.activity-photo-blur-control { white-space: nowrap; }
+.activity-member-photo.is-blurred .ant-image-img,
+.activity-photo-preview.is-blurred .ant-image-preview-img { filter: blur(12px); }
+.activity-photo-preview-toolbar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; max-width: calc(100vw - 32px); }
