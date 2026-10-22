@@ -162,3 +162,18 @@
 
 .activity-members { margin-top: 20px; }
 .activity-members-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+
+/* Give each preview real image space while retaining two fixed hour slots. */
+.insights-board { grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; height: clamp(1000px, calc(100dvh - 80px), 1280px); }
+.insights-member-media { position: relative; }
+.insights-fixed-grid .activity-video-meta { position: absolute; inset: auto 0 0; height: auto; min-height: 0; padding: 18px 36px 5px 7px; background: linear-gradient(transparent, var(--activity-overlay)); opacity: 0; pointer-events: none; }
+.insights-member-media:hover .activity-video-meta, .insights-member-media:focus-within .activity-video-meta { opacity: 1; }
+.insights-fixed-grid .activity-video-meta .ant-typography { color: var(--activity-on-overlay); }
+.insights-no-upload { margin-bottom: 0; }
+.insights-expand { margin-left: auto; flex-shrink: 0; }
+.insights-replay.is-expanded { position: fixed; inset: 12px; z-index: 999; display: flex; flex-direction: column; padding: 16px; border: 1px solid var(--activity-border); border-radius: 10px; background: var(--activity-bg); box-shadow: 0 0 0 12px var(--activity-overlay); }
+.insights-replay.is-expanded .insights-board { flex: 1; height: auto; min-height: 0; grid-template-columns: minmax(0, 1fr) 300px; }
+.insights-replay.is-expanded .insights-video-scroll { height: 100%; min-height: 0; }
+.insights-replay.is-expanded .insights-conversation { height: auto; }
+@media (max-width: 1150px) { .insights-board, .insights-replay.is-expanded .insights-board { grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; } }
+@media (max-width: 900px) { .insights-board { grid-template-columns: minmax(0, 1fr); height: auto; } .insights-video-scroll { height: 1000px; min-height: 1000px; } }

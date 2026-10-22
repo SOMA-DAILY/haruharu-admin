@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Avatar, Button, Empty, Popover, Select, Tooltip, Typography } from 'antd'
-import { AimOutlined, HeartOutlined, LeftOutlined, LinkOutlined, MessageOutlined, PlayCircleOutlined, QuestionCircleOutlined, RightOutlined, VideoCameraOutlined } from '@ant-design/icons'
+import { AimOutlined, FullscreenOutlined, FullscreenExitOutlined, HeartOutlined, LeftOutlined, LinkOutlined, MessageOutlined, PlayCircleOutlined, QuestionCircleOutlined, RightOutlined, VideoCameraOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import type { ActivityVideo, RoomActivity, RoomDetail } from '../../api/types'
 import { countsOf, findChatSlot, gridColumns, memberName, reactionEmoji, relatedTo, slotLabel, type ActivitySlot } from './model'
@@ -61,11 +61,23 @@ function ContinuousChat({ slots, selected, userId, onVideo }: Pick<Props, 'slots
 export default function VideoBoard({ room, slots, userId, order, thumbnail, eventCard, onVideo }: Props) {
   const ordered = useMemo(() => order === 'asc' ? slots : [...slots].reverse(), [order, slots])
   const [selectedKey, setSelectedKey] = useState<string>()
+  const [expanded, setExpanded] = useState(false)
   const replay = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const nodes = useRef(new Map<string, HTMLElement>())
   const selected = slots.find(slot => slot.key === selectedKey) ?? ordered[0]
   const members = [...room.members].sort((a, b) => a.member_id - b.member_id)
+  useEffect(() => {
+    if (!expanded) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const close = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || [...document.querySelectorAll<HTMLElement>('[role="dialog"], .ant-popover, .ant-select-dropdown')].some(element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')) return
+      setExpanded(false)
+    }
+    window.addEventListener('keydown', close)
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', close) }
+  }, [expanded])
   const goTo = useCallback((key: string) => {
     setSelectedKey(key)
     const root = scroller.current, node = nodes.current.get(key)
@@ -106,10 +118,11 @@ export default function VideoBoard({ room, slots, userId, order, thumbnail, even
     }
     if (active && active.key !== selected.key) setSelectedKey(active.key)
   }
-  return <div className="insights-replay" ref={replay} aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown">
+  return <div className={`insights-replay${expanded ? ' is-expanded' : ''}`} ref={replay} aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown">
     <div className="insights-replay-toolbar">
       <Select aria-label="영상 시간대 이동" value={selected.key} options={ordered.map(slot => ({ value: slot.key, label: `${slot.day ? `${slot.day}일차 · ` : ''}${slotLabel(slot)}` }))} onChange={goTo} style={{ width: 272, maxWidth: '100%' }} />
       <div className="insights-slot-navigation"><Tooltip title="이전 시간대 (← / ↑)"><Button size="small" type="text" aria-label="이전 시간대" icon={<LeftOutlined />} disabled={selectedIndex <= 0} onClick={() => goTo(ordered[selectedIndex - 1].key)} /></Tooltip><Tooltip title="다음 시간대 (→ / ↓)"><Button size="small" type="text" aria-label="다음 시간대" icon={<RightOutlined />} disabled={selectedIndex >= ordered.length - 1} onClick={() => goTo(ordered[selectedIndex + 1].key)} /></Tooltip></div>
+      <Tooltip title={expanded ? '확대 닫기 (Esc)' : '영상 모아보기 확대'}><Button className="insights-expand" aria-label={expanded ? '확대 닫기' : '영상 모아보기 확대'} aria-pressed={expanded} icon={expanded ? <FullscreenExitOutlined /> : <FullscreenOutlined />} onClick={() => setExpanded(value => !value)} /></Tooltip>
     </div>
     <div className="insights-board">
       <div className="insights-video-scroll" ref={scroller} onScroll={onScroll} tabIndex={0} aria-label="시간대별 참가자 영상">
