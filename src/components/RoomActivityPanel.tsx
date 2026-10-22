@@ -252,9 +252,28 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
       </div>
       {summary.isError ? <Alert type="error" showIcon title="활동 요약을 불러오지 못했습니다." action={<Button size="small" onClick={() => void summary.refetch()}>다시 시도</Button>} />
         : <div className="activity-metrics" aria-busy={summary.isFetching}>{metrics.map(m => <button key={m.key} className={`activity-metric${type === m.key ? ' is-selected' : ''}`} onClick={() => selectType(type === m.key ? undefined : m.key)} aria-pressed={type === m.key}>
-          <span className="activity-metric-label">{m.label}</span><span className="activity-metric-value">{m.value?.toLocaleString() ?? '—'}</span>
+          <span className="activity-metric-label">{icons[m.key]} {m.label}</span><span className="activity-metric-value">{m.value?.toLocaleString() ?? '—'}<small>{m.suffix}</small></span>
         </button>)}</div>}
 
+      <Collapse ghost items={[{ key: 'members', label: '참여자별 활동 현황', extra: <PhotoBlurSwitch checked={blurPhotos} onChange={setBlurPhotos} />, children: summary.isError ? <Text type="secondary">요약을 다시 불러와 주세요.</Text> : <>
+        {dailyUploads.some(q => q.isError) && <Alert type="error" showIcon title="일별 업로드 수를 불러오지 못했습니다." action={<Button onClick={() => dailyUploads.forEach(q => { void q.refetch() })}>다시 시도</Button>} />}
+        <Typography.Paragraph type="secondary">일차별 업로드 열은 일차 필터와 관계없이 각 일차 전체를 표시합니다. 하단 총계·평균은 방 전체 참여자 {room.members.length}명 기준이며, 업로드 0건인 참여자도 포함합니다. 진행 중인 일차는 현재까지의 수치입니다.</Typography.Paragraph>
+        <Table rowKey="user_id" size="small" loading={summary.isLoading} columns={columns} dataSource={summary.data?.members} pagination={false} scroll={{ x: 716 + uploadDays.length * 115 }} locale={{ emptyText: '참여자가 없습니다.' }}
+          summary={() => <Table.Summary>
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0} colSpan={7}><Text strong>방 전체 일별 총 업로드</Text></Table.Summary.Cell>
+              {uploadDays.map((day, index) => <Table.Summary.Cell key={day} index={7 + index}>{uploadValue(index)}</Table.Summary.Cell>)}
+            </Table.Summary.Row>
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0} colSpan={7}><Text strong>방 전체 일별 1인당 평균 업로드</Text></Table.Summary.Cell>
+              {uploadDays.map((day, index) => {
+                const total = uploadValue(index)
+                return <Table.Summary.Cell key={day} index={7 + index}>{typeof total === 'number' ? `${(room.members.length ? total / room.members.length : 0).toFixed(1)}개` : total}</Table.Summary.Cell>
+              })}
+            </Table.Summary.Row>
+          </Table.Summary>}
+        />
+      </> }]} />
     </Card>
 
     <Card className="activity-feed">
@@ -278,27 +297,6 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
           : hasNextPage ? <Button size="small" loading={isFetchingNextPage} onClick={() => void fetchNextPage()}>더 보기</Button>
             : <Text type="secondary">마지막 활동입니다</Text>}
       </div>}
-    </Card>
-    <Card className="activity-member-table" size="small">
-      <Collapse ghost items={[{ key: 'members', label: '참여자별 활동 현황', extra: <PhotoBlurSwitch checked={blurPhotos} onChange={setBlurPhotos} />, children: summary.isError ? <Text type="secondary">요약을 다시 불러와 주세요.</Text> : <>
-        {dailyUploads.some(q => q.isError) && <Alert type="error" showIcon title="일별 업로드 수를 불러오지 못했습니다." action={<Button onClick={() => dailyUploads.forEach(q => { void q.refetch() })}>다시 시도</Button>} />}
-        <Typography.Paragraph type="secondary">일차별 업로드 열은 일차 필터와 관계없이 각 일차 전체를 표시합니다. 하단 총계·평균은 방 전체 참여자 {room.members.length}명 기준이며, 업로드 0건인 참여자도 포함합니다. 진행 중인 일차는 현재까지의 수치입니다.</Typography.Paragraph>
-        <Table rowKey="user_id" size="small" loading={summary.isLoading} columns={columns} dataSource={summary.data?.members} pagination={false} scroll={{ x: 716 + uploadDays.length * 115 }} locale={{ emptyText: '참여자가 없습니다.' }}
-          summary={() => <Table.Summary>
-            <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={7}><Text strong>방 전체 일별 총 업로드</Text></Table.Summary.Cell>
-              {uploadDays.map((day, index) => <Table.Summary.Cell key={day} index={7 + index}>{uploadValue(index)}</Table.Summary.Cell>)}
-            </Table.Summary.Row>
-            <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={7}><Text strong>방 전체 일별 1인당 평균 업로드</Text></Table.Summary.Cell>
-              {uploadDays.map((day, index) => {
-                const total = uploadValue(index)
-                return <Table.Summary.Cell key={day} index={7 + index}>{typeof total === 'number' ? `${(room.members.length ? total / room.members.length : 0).toFixed(1)}개` : total}</Table.Summary.Cell>
-              })}
-            </Table.Summary.Row>
-          </Table.Summary>}
-        />
-      </> }]} />
     </Card>
     <Modal title={video?.caption || '영상 보기'} open={video != null} onCancel={() => setVideo(null)} footer={null} destroyOnHidden width="min(1100px, 96vw)" className="activity-video-modal" style={styles}>
       {video && <VideoPlayer key={`${video.id}-${video.video_url}`} video={video} />}

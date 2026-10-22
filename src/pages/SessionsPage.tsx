@@ -1,8 +1,8 @@
-import { useState, type Key } from 'react'
+import { useEffect, useState, type Key } from 'react'
 import { Card, Table, Select, DatePicker, Space, Button, Alert, Empty, Tooltip, Typography, Collapse, Segmented, Modal, Form, Input, App, Skeleton } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -84,12 +84,10 @@ const columns: ColumnsType<RoomListItem> = [
   },
 ]
 
-function GroupRoomsTable({ query, selected, onSelect, canWrite, showAll }: {
+function GroupRoomsTable({ query, selected, onSelect, canWrite, showAll, page, size, onPageChange, onOpenRoom }: {
   query: RoomListQuery; selected: Key[]; onSelect: (ids: Key[]) => void; canWrite: boolean; showAll: () => void
+  page: number; size: number; onPageChange: (page: number, size: number) => void; onOpenRoom: (id: number) => void
 }) {
-  const navigate = useNavigate()
-  const [page, setPage] = useState(0)
-  const [size, setSize] = useState(20)
   const { data, isLoading, isError } = useRooms({ ...query, page, size })
   return <>
     {isError && <Alert type="error" showIcon title="방 목록을 불러오지 못했습니다." />}
@@ -97,14 +95,16 @@ function GroupRoomsTable({ query, selected, onSelect, canWrite, showAll }: {
       rowSelection={canWrite ? { selectedRowKeys: selected, onChange: onSelect, preserveSelectedRowKeys: true } : undefined}
       scroll={{ x: 880 }} size="middle"
       locale={{ emptyText: <Empty description="조건에 맞는 방이 없습니다.">{query.isTest === false && <Button onClick={showAll}>전체 방 보기</Button>}</Empty> }}
-      onRow={room => ({ onClick: () => navigate(`/sessions/${room.room_id}`), style: { cursor: 'pointer' } })}
+      onRow={room => ({ onClick: () => onOpenRoom(room.room_id), style: { cursor: 'pointer' } })}
       pagination={{ current: page + 1, pageSize: size, total: data?.page.total_elements ?? 0, showSizeChanger: true,
-        onChange: (p, ps) => { setPage(p - 1); setSize(ps) } }} />
+        onChange: (p, ps) => onPageChange(p - 1, ps) }} />
   </>
 }
 
 export default function SessionsPage() {
   const { me } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { message } = App.useApp()
   const qc = useQueryClient()
   const canWrite = me?.role === 'SUPER' || me?.role === 'OPERATOR'
@@ -113,7 +113,6 @@ export default function SessionsPage() {
   const status = (params.get('status') || undefined) as RoomStatus | undefined
   const date = params.get('date')
   const [selected, setSelected] = useState<Key[]>([])
-  const [active, setActive] = useState<string[]>()
   const [createOpen, setCreateOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
   const [assignOpen, setAssignOpen] = useState(false)
@@ -122,16 +121,59 @@ export default function SessionsPage() {
   const groups = useRoomGroups()
   const assign = useAssignRoomOrganization()
   const createGroup = useMutation({ mutationFn: roomsApi.createGroup, onSuccess: async group => {
-    await qc.invalidateQueries({ queryKey: ['room-groups'] }); setGroupOpen(false); setActive([String(group.id)]); message.success('기수를 추가했습니다.')
+    await qc.invalidateQueries({ queryKey: ['room-groups'] }); setGroupOpen(false); setExpanded([String(group.id)]); message.success('기수를 추가했습니다.')
   }, onError: error => message.error(error instanceof ApiError ? error.message : '기수를 추가하지 못했습니다.') })
   const changeFilter = (key: string, value?: string) => {
     const next = new URLSearchParams(params)
     if (value) next.set(key, value); else next.delete(key)
+    for (const name of [...next.keys()]) if (name.startsWith('page.')) next.delete(name)
     setParams(next, { replace: true }); setSelected([])
   }
   const showAll = () => changeFilter('view', 'all')
   const filter: RoomListQuery = { isTest: view === 'all' ? undefined : view === 'test', status, scheduledDate: date || undefined }
-  const expanded = active ?? [String(groups.data?.[0]?.id ?? 'ungrouped')]
+  const expanded = params.has('expanded') ? params.get('expanded')!.split(',').filter(Boolean) : [String(groups.data?.[0]?.id ?? 'ungrouped')]
+  const setExpanded = (keys: string[]) => {
+    const next = new URLSearchParams(params)
+    next.set('expanded', keys.join(','))
+    setParams(next, { replace: true })
+  }
+  const changePage = (group: string, page: number, size: number) => {
+    const next = new URLSearchParams(params)
+    next.set(`page.${group}`, String(page)); next.set(`size.${group}`, String(size))
+    setParams(next, { replace: true })
+  }
+  const openRoom = (id: number) => {
+    const returnTo = location.pathname + location.search
+    try { sessionStorage.setItem(`room-list-scroll:${location.search}`, String(window.scrollY)) } catch { /* Storage may be disabled. */ }
+    navigate(`/sessions/${id}`, { state: { roomListReturnTo: returnTo } })
+  }
+  // Restore only once on return; wait for expanded tables to provide enough height.
+  // User scrolling cancels restoration so a slow query cannot pull the page back.
+  useEffect(() => {
+    const key = `room-list-scroll:${location.search}`
+    let target: number
+    try { const saved = sessionStorage.getItem(key); if (saved == null) return; target = Number(saved) } catch { return }
+    if (!Number.isFinite(target) || target < 0) return
+    let frame = 0
+    const stop = () => {
+      observer.disconnect(); cancelAnimationFrame(frame); window.clearTimeout(timeout)
+      window.removeEventListener('wheel', stop); window.removeEventListener('touchstart', stop); window.removeEventListener('keydown', stop)
+    }
+    const restore = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (document.documentElement.scrollHeight - window.innerHeight + 1 >= target) { window.scrollTo(0, target); stop(); try { sessionStorage.removeItem(key) } catch { /* Optional restoration. */ } }
+      })
+    }
+    const observer = new ResizeObserver(restore)
+    observer.observe(document.querySelector('main') ?? document.body)
+    const timeout = window.setTimeout(stop, 5000)
+    window.addEventListener('wheel', stop, { passive: true }); window.addEventListener('touchstart', stop, { passive: true }); window.addEventListener('keydown', stop)
+    restore()
+    return stop
+    // Snapshot the entry URL only. Filter/pagination changes are not a return visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const sections: (RoomGroup | { id: 'ungrouped'; name: string })[] = [...(groups.data ?? []), { id: 'ungrouped', name: '기수 미지정' }]
   const apply = async () => {
     const value = await assignForm.validateFields()
@@ -162,10 +204,13 @@ export default function SessionsPage() {
         {selected.length > 100 && <Typography.Text type="secondary">한 번에 100개까지 지정할 수 있습니다.</Typography.Text>}
       </Space>}
       {groups.isPending ? <Skeleton active /> : groups.isError ? <Alert type="error" showIcon title="기수를 불러오지 못했습니다." action={<Button onClick={() => groups.refetch()}>다시 시도</Button>} /> :
-        <Collapse activeKey={expanded} onChange={keys => setActive(typeof keys === 'string' ? [keys] : keys)} destroyOnHidden items={sections.map(group => ({
+        <Collapse activeKey={expanded} onChange={keys => setExpanded(typeof keys === 'string' ? [keys] : keys)} destroyOnHidden items={sections.map(group => ({
           key: String(group.id), label: group.name,
-          children: <GroupRoomsTable key={`${group.id}:${params.toString()}`} query={{ ...filter, groupId: typeof group.id === 'number' ? group.id : undefined, ungrouped: group.id === 'ungrouped' }}
-            selected={selected} onSelect={setSelected} canWrite={canWrite} showAll={showAll} />,
+          children: <GroupRoomsTable key={group.id} query={{ ...filter, groupId: typeof group.id === 'number' ? group.id : undefined, ungrouped: group.id === 'ungrouped' }}
+            selected={selected} onSelect={setSelected} canWrite={canWrite} showAll={showAll}
+            page={Math.max(0, Number(params.get(`page.${group.id}`)) || 0)}
+            size={[10, 20, 50, 100].includes(Number(params.get(`size.${group.id}`))) ? Number(params.get(`size.${group.id}`)) : 20}
+            onPageChange={(page, size) => changePage(String(group.id), page, size)} onOpenRoom={openRoom} />,
         }))} />}
     </Card>
     <Modal title="기수 추가" open={groupOpen} onCancel={() => setGroupOpen(false)} onOk={() => groupForm.submit()} confirmLoading={createGroup.isPending} okText="추가" cancelText="취소" destroyOnHidden>
