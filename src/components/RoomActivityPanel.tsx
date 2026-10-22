@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Alert, Avatar, Button, Card, Collapse, Empty, Image, Modal, Segmented, Select, Skeleton, Space, Switch, Table, Tag, Typography, theme } from 'antd'
 import { HeartOutlined, MessageOutlined, PlayCircleOutlined, QuestionCircleOutlined, ReloadOutlined, VideoCameraOutlined, FullscreenOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -31,13 +31,42 @@ function PhotoBlurSwitch({ checked, onChange, overlay = false }: { checked: bool
   </Space>
 }
 
+// Match the app's 64pt profile sheet on the primary iPhone 12 (@3x).
+// expo-image halves blurRadius=12 and blurs the early-resized 192px bitmap.
+const APP_PROFILE_BITMAP_SIZE = 64 * 3
+const APP_PROFILE_BLUR_RADIUS = 12 / 2
+
+function updateAppPhotoBlur(image: HTMLImageElement) {
+  if (!image.naturalWidth || !image.naturalHeight) return
+  const bitmapScale = Math.min(1, APP_PROFILE_BITMAP_SIZE / Math.max(image.naturalWidth, image.naturalHeight))
+  const fit = getComputedStyle(image).objectFit === 'cover' ? Math.max : Math.min
+  const displayScale = fit(image.clientWidth / image.naturalWidth, image.clientHeight / image.naturalHeight)
+  if (displayScale > 0) image.style.setProperty('--activity-photo-blur-radius', `${APP_PROFILE_BLUR_RADIUS * displayScale / bitmapScale}px`)
+}
+
+function AppPhotoMedia({ children }: { children: ReactNode }) {
+  const root = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const image = root.current?.querySelector('img')
+    if (!image) return
+    // Layout dimensions exclude zoom/rotation, which scale the blur with the photo.
+    const update = () => updateAppPhotoBlur(image)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(image)
+    image.addEventListener('load', update)
+    return () => { observer.disconnect(); image.removeEventListener('load', update) }
+  }, [])
+  return <span ref={root} className="activity-photo-media">{children}</span>
+}
+
 function ParticipantPhoto({ url, name, blurred, onBlurChange }: { url?: string | null; name: string; blurred: boolean; onBlurChange: (value: boolean) => void }) {
   const [failed, setFailed] = useState(false)
   const src = mediaUrl(url ?? null)
   if (!src || failed) return <span className="activity-member-photo-empty" aria-label={failed ? '사진을 불러오지 못했습니다' : '프로필 사진 없음'} title={failed ? '사진을 불러오지 못했습니다' : '프로필 사진 없음'}>—</span>
-  return <Image src={src} alt={`${name} 프로필 사진`} aria-label={`${name} 프로필 사진 확대`} width={44} height={44}
+  return <AppPhotoMedia><Image src={src} alt={`${name} 프로필 사진`} aria-label={`${name} 프로필 사진 확대`} width={44} height={44}
     classNames={{ root: `activity-member-photo${blurred ? ' is-blurred' : ''}`, popup: { root: `activity-photo-preview${blurred ? ' is-blurred' : ''}` } }} loading="lazy" onError={() => setFailed(true)}
-    preview={{ cover: <FullscreenOutlined />, actionsRender: actions => <div className="activity-photo-preview-toolbar">{actions}<PhotoBlurSwitch checked={blurred} onChange={onBlurChange} overlay /></div> }} />
+    preview={{ cover: <FullscreenOutlined />, imageRender: image => <AppPhotoMedia>{image}</AppPhotoMedia>, actionsRender: actions => <div className="activity-photo-preview-toolbar">{actions}<PhotoBlurSwitch checked={blurred} onChange={onBlurChange} overlay /></div> }} /></AppPhotoMedia>
 }
 
 function VideoThumbnail({ video, onOpen }: { video: ActivityVideo; onOpen: () => void }) {
