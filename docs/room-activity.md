@@ -1,4 +1,4 @@
-# 방 활동 조회 (#29, #68, #70)
+# 방 활동 조회 (#29, #68, #70, #72)
 
 `/sessions/:id`의 방 활동 화면. 기존 관리자 조회 API를 사용한다. 참여자 사진은 방 상세의 nullable `members[].profile_image_url`을 사용하며 DB 스키마 변경은 없다.
 
@@ -42,3 +42,5 @@ Node 22에서 `npm test`, `npm run lint`, `npm run build`를 사용한다. 모�
 증거는 워크스페이스 `artifacts/admin-room-insights-20261023/revision-results.json` 및 revision-final-*.png에 기록한다. 운영 배포/실제 운영 S3/Safari/Firefox는 미검증이다.
 
 참여자 사진 추가 검증은 `artifacts/admin-participant-photos-20261023/browser-results.json`에 기록한다. 로컬 API/DB의 6/8/10명 표, 원본 세로/가로 비율 확대, 키보드/닫기, 확대 중 시간 이동 방지, 이전 응답 호환, 사진 없음/404, 일별 합계 및 1024/1440/1920px을 확인한다. 사진 추가분의 운영 배포와 실제 운영 S3 접근은 별도 확인 대상이다.
+
+참여자 표 헤더와 사진 확대 도구 영역의 `사진 블러` 스위치로 썸네일·확대 사진의 블러를 함께 전환한다. 기본 OFF이며 화면 안에서만 적용된다. 새로고침하면 OFF로 시작한다. 원본 URL·서버 데이터·일반 앱의 사진 공개 정책은 변경하지 않는다. 스위치의 클릭/키보드는 표 접기나 영상 시간 이동을 실행하지 않는다.
