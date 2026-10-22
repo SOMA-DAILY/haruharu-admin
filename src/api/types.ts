@@ -110,6 +110,7 @@ export interface RoomMember {
   pseudonym: string | null // 방 세션 가명(미배정 시 null, BE #393/#400)
   age: number | null
   region: string | null
+  profile_image_url?: string | null // 대표사진 원본 접근 URL (이전 서버 응답과 호환)
 }
 
 export interface RoomDetail {

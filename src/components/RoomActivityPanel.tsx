@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { Alert, Avatar, Button, Card, Collapse, Empty, Modal, Segmented, Select, Skeleton, Space, Table, Tag, Typography, theme } from 'antd'
+import { Alert, Avatar, Button, Card, Collapse, Empty, Image, Modal, Segmented, Select, Skeleton, Space, Table, Tag, Typography, theme } from 'antd'
 import { HeartOutlined, MessageOutlined, PlayCircleOutlined, QuestionCircleOutlined, ReloadOutlined, VideoCameraOutlined, FullscreenOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -19,6 +19,15 @@ const icons = { VIDEO: <VideoCameraOutlined />, CHAT: <MessageOutlined />, REACT
 function mediaUrl(value: string | null) {
   if (!value) return undefined
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : undefined } catch { return undefined }
+}
+
+function ParticipantPhoto({ url, name }: { url?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false)
+  const src = mediaUrl(url ?? null)
+  if (!src || failed) return <span className="activity-member-photo-empty" aria-label={failed ? '사진을 불러오지 못했습니다' : '프로필 사진 없음'} title={failed ? '사진을 불러오지 못했습니다' : '프로필 사진 없음'}>—</span>
+  return <Image src={src} alt={`${name} 프로필 사진`} aria-label={`${name} 프로필 사진 확대`} width={44} height={44}
+    classNames={{ root: 'activity-member-photo' }} loading="lazy" onError={() => setFailed(true)}
+    preview={{ cover: <FullscreenOutlined /> }} />
 }
 
 function VideoThumbnail({ video, onOpen }: { video: ActivityVideo; onOpen: () => void }) {
@@ -149,6 +158,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
   const busy = (events.isFetching && !isFetchingNextPage) || summary.isFetching || snapshot.isFetching
   const selectType = (value: RoomActivityType | undefined) => setType(value)
   const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ['room', room.room_id], exact: true })
     void qc.invalidateQueries({ queryKey: ['room', room.room_id, 'activities'] })
     void qc.invalidateQueries({ queryKey: ['room', room.room_id, 'activity-summary'] })
   }
@@ -176,6 +186,10 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
   })
   const columns = [
     { title: '참여자', dataIndex: 'name', render: (name: string, m: RoomActivitySummary['members'][number]) => <Button type="link" onClick={() => setUserId(m.user_id)}>{name}</Button> },
+    { title: '사진', key: 'profile_image', width: 76, render: (_: unknown, m: RoomActivitySummary['members'][number]) => {
+      const url = room.members.find(member => member.user_id === m.user_id)?.profile_image_url
+      return <ParticipantPhoto key={url ?? 'no-photo'} url={url} name={m.name} />
+    } },
     { title: '영상', dataIndex: 'videos' }, { title: '채팅', dataIndex: 'chats' },
     { title: '보낸 반응', dataIndex: 'reactions_sent' }, { title: '받은 반응', dataIndex: 'reactions_received' },
     { title: '받은 질문', dataIndex: 'questions_received' },
@@ -229,17 +243,17 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
       <Collapse ghost items={[{ key: 'members', label: '참여자별 활동 현황', children: summary.isError ? <Text type="secondary">요약을 다시 불러와 주세요.</Text> : <>
         {dailyUploads.some(q => q.isError) && <Alert type="error" showIcon title="일별 업로드 수를 불러오지 못했습니다." action={<Button onClick={() => dailyUploads.forEach(q => { void q.refetch() })}>다시 시도</Button>} />}
         <Typography.Paragraph type="secondary">일차별 업로드 열은 일차 필터와 관계없이 각 일차 전체를 표시합니다. 하단 총계·평균은 방 전체 참여자 {room.members.length}명 기준이며, 업로드 0건인 참여자도 포함합니다. 진행 중인 일차는 현재까지의 수치입니다.</Typography.Paragraph>
-        <Table rowKey="user_id" size="small" loading={summary.isLoading} columns={columns} dataSource={summary.data?.members} pagination={false} scroll={{ x: 640 + uploadDays.length * 115 }} locale={{ emptyText: '참여자가 없습니다.' }}
+        <Table rowKey="user_id" size="small" loading={summary.isLoading} columns={columns} dataSource={summary.data?.members} pagination={false} scroll={{ x: 716 + uploadDays.length * 115 }} locale={{ emptyText: '참여자가 없습니다.' }}
           summary={() => <Table.Summary>
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={6}><Text strong>방 전체 일별 총 업로드</Text></Table.Summary.Cell>
-              {uploadDays.map((day, index) => <Table.Summary.Cell key={day} index={6 + index}>{uploadValue(index)}</Table.Summary.Cell>)}
+              <Table.Summary.Cell index={0} colSpan={7}><Text strong>방 전체 일별 총 업로드</Text></Table.Summary.Cell>
+              {uploadDays.map((day, index) => <Table.Summary.Cell key={day} index={7 + index}>{uploadValue(index)}</Table.Summary.Cell>)}
             </Table.Summary.Row>
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={6}><Text strong>방 전체 일별 1인당 평균 업로드</Text></Table.Summary.Cell>
+              <Table.Summary.Cell index={0} colSpan={7}><Text strong>방 전체 일별 1인당 평균 업로드</Text></Table.Summary.Cell>
               {uploadDays.map((day, index) => {
                 const total = uploadValue(index)
-                return <Table.Summary.Cell key={day} index={6 + index}>{typeof total === 'number' ? `${(room.members.length ? total / room.members.length : 0).toFixed(1)}개` : total}</Table.Summary.Cell>
+                return <Table.Summary.Cell key={day} index={7 + index}>{typeof total === 'number' ? `${(room.members.length ? total / room.members.length : 0).toFixed(1)}개` : total}</Table.Summary.Cell>
               })}
             </Table.Summary.Row>
           </Table.Summary>}
