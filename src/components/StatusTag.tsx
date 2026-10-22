@@ -45,7 +45,7 @@ export function RoomStatusTag({ status }: { status: RoomStatus }) {
   const m = ROOM_MAP[status]
   return <Tag color={m.color}>{m.label}</Tag>
 }
-export function RoomTypeTag({ isTest }: { isTest: boolean | undefined }) {
+export function RoomTypeTag({ isTest }: { isTest: boolean | null | undefined }) {
   if (typeof isTest !== 'boolean') return <Tag>미설정</Tag>
   return <Tag color={isTest ? 'default' : 'blue'}>{isTest ? '테스트' : '운영'}</Tag>
 }

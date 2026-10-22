@@ -66,6 +66,24 @@ export const useUpdateRoomType = (roomId: number) => {
   })
 }
 
+export const useRoomGroups = () => useQuery({
+  queryKey: ['room-groups'],
+  queryFn: async () => {
+    const groups: import('./types').RoomGroup[] = []
+    for (let page = 0; ; page++) {
+      const result = await roomsApi.groups(page)
+      groups.push(...result.content)
+      if (page + 1 >= result.page.total_pages) return groups
+    }
+  },
+})
+export const useAssignRoomOrganization = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: roomsApi.assignOrganization,
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['rooms'] }), qc.invalidateQueries({ queryKey: ['room'] })]),
+  })
+}
 export const useCreateRoom = () => {
   const qc = useQueryClient()
   return useMutation({

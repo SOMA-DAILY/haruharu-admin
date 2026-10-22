@@ -89,9 +89,13 @@ export interface DashboardMetrics {
 }
 
 // ===== 세션(방) =====
+export interface RoomGroup { id: number; name: string }
+export interface RoomOrganizationBody { room_ids: number[]; group_id?: number; clear_group?: boolean; is_test?: boolean }
+
 export interface RoomListItem {
+  group_id: number | null
   room_id: number
-  is_test: boolean
+  is_test: boolean | null
   status: RoomStatus
   scheduled_date: string
   current_day: number
@@ -114,8 +118,10 @@ export interface RoomMember {
 }
 
 export interface RoomDetail {
+  group_id: number | null
+  group_name: string | null
   room_id: number
-  is_test: boolean
+  is_test: boolean | null
   status: RoomStatus
   scheduled_date: string
   total_days: number
@@ -178,6 +184,7 @@ export interface RoomActivitySummary {
 
 // 방 생성·초대코드 (초대코드 MVP)
 export interface CreateRoomBody {
+  group_id?: number
   is_test: boolean
   starts_at: string
   final_selection_opens_at: string
@@ -190,7 +197,7 @@ export interface CreateRoomBody {
   missions?: RoomMissionBody[] // 최대 100개. 서버 기본 미션 없음
 }
 export interface RoomCreated {
-  is_test: boolean
+  is_test: boolean | null
   room_id: number
   code: string
 }

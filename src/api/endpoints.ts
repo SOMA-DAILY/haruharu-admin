@@ -60,6 +60,8 @@ export const dashboardApi = {
 
 // ===== 세션(방) (#191) =====
 export interface RoomListQuery {
+  groupId?: number
+  ungrouped?: boolean
   isTest?: boolean
   status?: RoomStatus
   scheduledDate?: string // YYYY-MM-DD (쿼리 파라미터는 camelCase)
@@ -75,6 +77,9 @@ export interface RoomActivityQuery {
   order?: 'asc' | 'desc'
 }
 export const roomsApi = {
+  groups: (page = 0) => get<import('./types').Paged<import('./types').RoomGroup>>('/room-groups', { page, size: 100 }),
+  createGroup: (name: string) => post<import('./types').RoomGroup>('/room-groups', { name }),
+  assignOrganization: (body: import('./types').RoomOrganizationBody) => patch<null>('/rooms/organization', body),
   activities: async (roomId: number, q: RoomActivityQuery, signal?: AbortSignal) =>
     (await http.get<Paged<RoomActivity>>(`/rooms/${roomId}/activities`, { params: q, signal })).data,
   selections: (roomId: number) => get<import('./types').RoomSelection[]>(`/rooms/${roomId}/selections`),

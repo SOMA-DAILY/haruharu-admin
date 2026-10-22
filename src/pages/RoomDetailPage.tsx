@@ -21,7 +21,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { useNavigate, useParams } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
-import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType } from '../api/queries'
+import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType, useRoomGroups, useAssignRoomOrganization } from '../api/queries'
 import { useAuth } from '../auth/AuthContext'
 import { RoomStatusTag, RoomInviteStatusTag, RoomTypeTag } from '../components/StatusTag'
 import { ApiError } from '../api/client'
@@ -136,6 +136,8 @@ export default function RoomDetailPage() {
   const { data, isLoading, isError } = useRoom(roomId)
   const cancelMut = useCancelRoom(roomId)
   const assignMut = useAssignGender(roomId)
+  const groupQuery = useRoomGroups()
+  const organizationMut = useAssignRoomOrganization()
   const typeMut = useUpdateRoomType(roomId)
 
   if (isError) return <Alert type="error" message="방 정보를 찾을 수 없습니다." showIcon />
@@ -234,13 +236,19 @@ export default function RoomDetailPage() {
           <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <Card>
               <Descriptions column={3} bordered size="small">
+                <Descriptions.Item label="기수" span={3}>
+                  {canWrite ? <Select aria-label="방 기수 변경" size="small" style={{ minWidth: 160 }} allowClear
+                    loading={groupQuery.isPending || organizationMut.isPending} disabled={groupQuery.isError || organizationMut.isPending}
+                    placeholder="기수 미지정" value={data.group_id ?? undefined} options={(groupQuery.data ?? []).map(g => ({ value: g.id, label: g.name }))}
+                    onChange={async value => { try { await organizationMut.mutateAsync({ room_ids: [roomId], group_id: value, clear_group: value == null }); message.success('기수를 변경했습니다.') } catch (error) { message.error(error instanceof ApiError ? error.message : '기수를 변경하지 못했습니다.') } }} /> : data.group_name ?? '기수 미지정'}
+                </Descriptions.Item>
                 <Descriptions.Item label="방 구분" span={3}>
-                  {canWrite && typeof data.is_test === 'boolean' ? (
+                  {canWrite ? (
                     <Select
                       aria-label="방 구분 변경"
                       size="small"
                       style={{ width: 120 }}
-                      value={data.is_test ? 'TEST' : 'OPERATIONAL'}
+                      placeholder="미설정" value={data.is_test == null ? undefined : data.is_test ? 'TEST' : 'OPERATIONAL'}
                       disabled={typeMut.isPending}
                       loading={typeMut.isPending}
                       onChange={changeType}

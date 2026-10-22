@@ -42,6 +42,7 @@ import {
 const fmt = (d: Dayjs) => d.format('YYYY-MM-DDTHH:mm:ss')
 
 type FormValues = {
+  group_id?: number
   room_type: 'OPERATIONAL' | 'TEST'
   starts_at: Dayjs
   final_selection_opens_at: Dayjs
@@ -315,7 +316,7 @@ function ChatScheduleSection({
   )
 }
 
-export default function CreateRoomModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function CreateRoomModal({ open, onClose, groups }: { open: boolean; onClose: () => void; groups: import('../api/types').RoomGroup[] }) {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const [form] = Form.useForm<FormValues>()
@@ -378,6 +379,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
     })
     try {
       const res = await createMut.mutateAsync({
+        group_id: v.group_id,
         is_test: v.room_type === 'TEST',
         starts_at: fmt(v.starts_at),
         final_selection_opens_at: fmt(v.final_selection_opens_at),
@@ -389,7 +391,7 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
         invite_expires_at: v.invite_expires_at ? fmt(v.invite_expires_at) : null,
         missions,
       })
-      setCreated(res)
+      setCreated({ ...res, is_test: v.room_type === 'TEST' })
     } catch (e) {
       // 400 이 missions[i].xxx 칸으로 오면 그 줄 아래에 표시
       const rowErrors = new Map<number, string>()
@@ -457,7 +459,8 @@ export default function CreateRoomModal({ open, onClose }: { open: boolean; onCl
           }
         />
       ) : (
-        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ room_type: 'OPERATIONAL', total_days: 3, max_uses: 6 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ group_id: groups[0]?.id, room_type: 'OPERATIONAL', total_days: 3, max_uses: 6 }}>
+          <Form.Item name="group_id" label="기수"><Select aria-label="새 방 기수" placeholder="기수 미지정" options={groups.map(g => ({ value: g.id, label: g.name }))} /></Form.Item>
           <Form.Item name="room_type" label="방 구분" rules={[{ required: true, message: '방 구분을 선택하세요.' }]}>
             <Select options={[{ value: 'OPERATIONAL', label: '운영방' }, { value: 'TEST', label: '테스트방' }]} />
           </Form.Item>
