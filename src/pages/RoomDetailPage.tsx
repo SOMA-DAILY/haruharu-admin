@@ -18,7 +18,7 @@ import {
 } from 'antd'
 import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
 import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType, useRoomGroups, useAssignRoomOrganization } from '../api/queries'
@@ -130,6 +130,9 @@ export default function RoomDetailPage() {
   const { id } = useParams()
   const roomId = Number(id)
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = location.state?.roomListReturnTo
+  const roomListPath = typeof returnTo === 'string' && (returnTo === '/sessions' || returnTo.startsWith('/sessions?')) ? returnTo : '/sessions'
   const { me } = useAuth()
   const canWrite = me?.role === 'SUPER' || me?.role === 'OPERATOR'
   const { message, modal } = App.useApp()
@@ -225,7 +228,7 @@ export default function RoomDetailPage() {
                 방 취소
               </Button>
             )}
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/sessions')}>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(roomListPath)}>
               목록
             </Button>
           </Space>
