@@ -149,7 +149,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
   const [day, setDay] = useState<number>()
   const [userId, setUserId] = useState<number>()
   const [type, setType] = useState<RoomActivityType | undefined>('VIDEO')
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc')
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc')
   const [video, setVideo] = useState<ActivityVideo | null>(null)
   const [blurPhotos, setBlurPhotos] = useState(false)
   const snapshot = useQuery({
