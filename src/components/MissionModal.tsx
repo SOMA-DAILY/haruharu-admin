@@ -39,6 +39,8 @@ import {
   REVEAL_FIELDS,
   REVEAL_LABEL,
   dayOf,
+  isPairChatMessage,
+  pairChatMessage,
   pushDefaultsFor,
 } from '../config/chatScheduleDefaults'
 import ChatBubblePreview from './ChatBubblePreview'
@@ -54,7 +56,7 @@ type Values = {
   opens_at?: Dayjs
   closes_at?: Dayjs | null
   reveal_fields: RevealField[]
-  content?: string // ANNOUNCEMENT 본문 · RECORDING 촬영 주제 (details.content). 시작 글로도 함께 보낸다
+  content?: string // ANNOUNCEMENT 본문 · RECORDING 촬영 주제 (details.content). 시작 글로도 함께 보낸다. PAIR_CHAT 은 시작 글로만
   image: MissionImage | null
   // 아래는 미션과 함께 다루는 시작 글 (START 안내)
   announcement_content?: string // PROFILE_REVEAL 의 채팅 글 (선택)
@@ -63,15 +65,17 @@ type Values = {
   push_body?: string
 }
 
-// 서버 검증 경로 → 폼 칸. ANNOUNCEMENT·RECORDING 은 본문과 안내 글이 같은 칸
+// 서버 검증 경로 → 폼 칸. ANNOUNCEMENT·RECORDING·PAIR_CHAT 은 본문과 안내 글이 같은 칸
 const fieldOf = (path: string, type: MissionType): keyof Values | undefined => {
   switch (path) {
     case 'type':
     case 'details':
       return 'type'
+    // PAIR_CHAT 은 같은 방에서 시간이 겹치는 1:1 대화가 있으면 opens_at 으로 온다
     case 'opens_at':
     case 'announcement.run_at':
       return 'opens_at'
+    // PAIR_CHAT 은 끝 시각이 없으면 closes_at 으로 온다 (이 종류는 끝 칸이 접히지 않고 늘 보인다)
     case 'closes_at':
       return 'closes_at'
     case 'details.content':
@@ -174,6 +178,7 @@ export default function MissionModal({
   const type = Form.useWatch('type', form) ?? 'ANNOUNCEMENT'
   const mode = Form.useWatch('mode', form) ?? 'SCHEDULED'
   const opensAt = Form.useWatch('opens_at', form)
+  const closesAt = Form.useWatch('closes_at', form)
   const revealFields = Form.useWatch('reveal_fields', form) ?? []
   const content = Form.useWatch('content', form) ?? ''
   const announcementContent = Form.useWatch('announcement_content', form) ?? ''
@@ -181,6 +186,8 @@ export default function MissionModal({
   const push = Form.useWatch('push', form) ?? false
   const isReveal = type === 'PROFILE_REVEAL'
   const isRecording = type === 'RECORDING'
+  // 1:1 대화: 시작~끝 동안 1:1 채팅이 열린다. 끝 시각은 접지 않고 필수로 받는다
+  const isPairChat = type === 'PAIR_CHAT'
 
   // 경고 (저장은 막지 않음). 기준 시각이 없으면 해당 경고 생략
   const at: Dayjs | undefined = mode === 'NOW' ? dayjs() : opensAt
@@ -196,7 +203,7 @@ export default function MissionModal({
   // 푸시 문구: 비었거나 다른 유형의 기본 문구 그대로면 지금 유형의 기본 문구로 채운다 (운영자가 고친 문구는 둔다)
   const fillPushDefaults = (missionType: MissionType) =>
     form.setFieldsValue(
-      pushDefaultsFor(missionType === 'RECORDING', {
+      pushDefaultsFor(missionType, {
         push_title: form.getFieldValue('push_title'),
         push_body: form.getFieldValue('push_body'),
       }),
@@ -205,13 +212,27 @@ export default function MissionModal({
     if (checked) fillPushDefaults(form.getFieldValue('type'))
   }
 
+  // 종류를 바꾸면 푸시 문구와 1:1 대화 기본 글을 그 종류에 맞춘다 (운영자가 고친 글은 둔다)
+  const onTypeChange = (next: MissionType) => {
+    if (form.getFieldValue('push')) fillPushDefaults(next)
+    const text: string = form.getFieldValue('content') ?? ''
+    if (next === 'PAIR_CHAT') {
+      if (!text.trim() || isPairChatMessage(text)) form.setFieldValue('content', pairChatMessage(form.getFieldValue('closes_at')))
+      return
+    }
+    if (isPairChatMessage(text)) form.setFieldValue('content', '')
+    // 1:1 대화에서 고른 끝 시각은 [더 보기]의 마감 시각으로 남는다. 접혀서 안 보이지 않게 펼친다
+    if (type === 'PAIR_CHAT' && form.getFieldValue('closes_at')) setMoreOpen(true)
+  }
+
   // PUT 은 전체 교체: closes_at·image_key 를 빼면 지워지므로 항상 지금 값을 보낸다
   const toBody = (v: Values, opensAtValue: string): RoomMissionBody => {
     const reveal = v.type === 'PROFILE_REVEAL'
     const text = v.content?.trim() ? v.content : null
     const body: RoomMissionBody = {
       type: v.type,
-      details: reveal ? { reveal_fields: v.reveal_fields ?? [] } : { content: text },
+      // 1:1 대화는 details 를 비워 보낸다 (다른 칸은 서버가 거절). 글은 시작 글로만 나간다
+      details: v.type === 'PAIR_CHAT' ? {} : reveal ? { reveal_fields: v.reveal_fields ?? [] } : { content: text },
       image_key: v.image?.key ?? null,
       opens_at: opensAtValue,
       closes_at: v.closes_at ? fmt(v.closes_at) : null,
@@ -320,6 +341,7 @@ export default function MissionModal({
   const saving = createMut.isPending || updateMut.isPending || updateStartMut.isPending
   const previewText = isReveal ? announcementContent : content
   const day = dayOf(at, startsAt)
+  const endDay = isPairChat ? dayOf(closesAt, startsAt) : undefined
   // 시작 글을 함께 고칠 수 없는 미션: 글이 없거나 이미 취소된 경우 (보기 전용일 땐 안내 불필요)
   const startNote =
     mission && !withStart && !readOnly ? (start ? '시작 글이 취소돼서 미션만 고쳐요' : '시작 글이 없는 미션이라 미션만 고쳐요') : null
@@ -349,20 +371,29 @@ export default function MissionModal({
         disabled={readOnly}
         onFinish={onFinish}
         onFinishFailed={({ errorFields }) => errorFields.some((f) => f.name[0] === 'closes_at') && setMoreOpen(true)}
-        // '지금'으로 바꾸면 시각 칸 오류를 지운다
-        onValuesChange={(changed) => 'mode' in changed && form.setFields([{ name: 'opens_at', errors: [] }])}
+        onValuesChange={(changed: Partial<Values>) => {
+          // '지금'으로 바꾸면 시각 칸 오류를 지운다
+          if ('mode' in changed) form.setFields([{ name: 'opens_at', errors: [] }])
+          // 1:1 대화 끝 시각을 바꾸면 손대지 않은 기본 글의 시각도 맞춘다
+          if (
+            'closes_at' in changed &&
+            form.getFieldValue('type') === 'PAIR_CHAT' &&
+            isPairChatMessage(form.getFieldValue('content'))
+          )
+            form.setFieldValue('content', pairChatMessage(changed.closes_at))
+        }}
       >
         {/* 종류는 만든 뒤 바꿀 수 없다 */}
         <Form.Item name="type" label="종류" style={{ marginBottom: 16 }}>
           <Radio.Group
             disabled={readOnly || !!mission}
             optionType="button"
-            onChange={(e) => form.getFieldValue('push') && fillPushDefaults(e.target.value)}
+            onChange={(e) => onTypeChange(e.target.value)}
             options={MISSION_TYPES.map((t) => ({ value: t, label: MISSION_TYPE_LABEL[t] }))}
           />
         </Form.Item>
 
-        <Form.Item label="보낼 시각" required style={{ marginBottom: 16 }}>
+        <Form.Item label={isPairChat ? '대화 시작' : '보낼 시각'} required style={{ marginBottom: 16 }}>
           <Space align="start" wrap>
             {!mission && (
               <Form.Item name="mode" noStyle>
@@ -388,6 +419,40 @@ export default function MissionModal({
           </Space>
         </Form.Item>
 
+        {/* 1:1 대화는 끝 시각이 필수라 [더 보기]에 접지 않고 시작 바로 아래에서 받는다 */}
+        {isPairChat && (
+          <Form.Item
+            label="대화 끝"
+            required
+            style={{ marginBottom: 16 }}
+            extra="이 시간 동안 참가자 프로필에 1:1 대화 아이콘이 켜져요. 끝 시각이 지나면 입력창만 닫혀요."
+          >
+            <Space align="start" wrap>
+              <Form.Item
+                name="closes_at"
+                style={{ margin: 0 }}
+                dependencies={['opens_at', 'mode']}
+                rules={[
+                  { required: true, message: '끝 시각을 선택하세요.' },
+                  ({ getFieldValue }) => ({
+                    validator: (_, value?: Dayjs | null) => {
+                      const from: Dayjs | undefined = getFieldValue('mode') === 'NOW' ? dayjs() : getFieldValue('opens_at')
+                      return !value || !from || value.isAfter(from)
+                        ? Promise.resolve()
+                        : Promise.reject(new Error('대화 시작보다 뒤로 정해 주세요'))
+                    },
+                  }),
+                ]}
+              >
+                <DatePicker showTime={{ minuteStep: 5, format: 'HH:mm' }} format="YYYY-MM-DD HH:mm" style={{ width: 180 }} />
+              </Form.Item>
+              {endDay != null && (
+                <Tag style={{ marginInlineEnd: 0, marginTop: 5 }}>{endDay <= 0 ? '방 시작 전' : `${endDay}일차`}</Tag>
+              )}
+            </Space>
+          </Form.Item>
+        )}
+
         {isReveal ? (
           <>
             <Form.Item
@@ -408,14 +473,17 @@ export default function MissionModal({
             )}
           </>
         ) : (
-          <Form.Item
-            name="content"
-            label="채팅에 올라갈 글"
-            rules={[{ required: true, whitespace: true, message: '글을 입력해 주세요' }]}
-            extra={isRecording ? '앱에서 이 글 아래에 [촬영하러 가기] 버튼이 붙어요' : undefined}
-          >
-            <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} maxLength={MESSAGE_MAX} showCount />
-          </Form.Item>
+          // 1:1 대화의 글은 시작 글로만 나가서, 시작 글을 함께 고칠 수 없으면 칸을 두지 않는다
+          (!isPairChat || showStart) && (
+            <Form.Item
+              name="content"
+              label="채팅에 올라갈 글"
+              rules={[{ required: true, whitespace: true, message: '글을 입력해 주세요' }]}
+              extra={isRecording ? '앱에서 이 글 아래에 [촬영하러 가기] 버튼이 붙어요' : undefined}
+            >
+              <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} maxLength={MESSAGE_MAX} showCount />
+            </Form.Item>
+          )
         )}
 
         <Form.Item name="image" label="사진" style={{ marginBottom: 16 }}>
@@ -448,31 +516,33 @@ export default function MissionModal({
           </>
         )}
 
-        {/* 잘 안 쓰는 칸은 접어 둔다. 값이 있으면 펼친 채로 연다 */}
-        <Collapse
-          ghost
-          size="small"
-          activeKey={moreOpen ? ['more'] : []}
-          onChange={(keys) => setMoreOpen(keys.length > 0)}
-          style={{ marginInline: -12, marginBottom: 8 }}
-          items={[
-            {
-              key: 'more',
-              label: '더 보기',
-              forceRender: true,
-              children: (
-                <Form.Item name="closes_at" label="마감 시각" extra="비우면 방이 끝날 때까지 열려 있어요" style={{ marginBottom: 0 }}>
-                  <DatePicker
-                    showTime={{ minuteStep: 5, format: 'HH:mm' }}
-                    format="YYYY-MM-DD HH:mm"
-                    placeholder="방 종료까지"
-                    style={{ width: 180 }}
-                  />
-                </Form.Item>
-              ),
-            },
-          ]}
-        />
+        {/* 잘 안 쓰는 칸은 접어 둔다. 값이 있으면 펼친 채로 연다. 1:1 대화는 끝 시각을 위에서 받는다 */}
+        {!isPairChat && (
+          <Collapse
+            ghost
+            size="small"
+            activeKey={moreOpen ? ['more'] : []}
+            onChange={(keys) => setMoreOpen(keys.length > 0)}
+            style={{ marginInline: -12, marginBottom: 8 }}
+            items={[
+              {
+                key: 'more',
+                label: '더 보기',
+                forceRender: true,
+                children: (
+                  <Form.Item name="closes_at" label="마감 시각" extra="비우면 방이 끝날 때까지 열려 있어요" style={{ marginBottom: 0 }}>
+                    <DatePicker
+                      showTime={{ minuteStep: 5, format: 'HH:mm' }}
+                      format="YYYY-MM-DD HH:mm"
+                      placeholder="방 종료까지"
+                      style={{ width: 180 }}
+                    />
+                  </Form.Item>
+                ),
+              },
+            ]}
+          />
+        )}
 
         {startNote && <Alert type="info" showIcon title={startNote} style={{ marginBottom: 16 }} />}
         {warnings.length > 0 && (

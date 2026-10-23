@@ -228,7 +228,7 @@ function ChatScheduleSection({
                         onChange={(checked) =>
                           update(r.uid, {
                             push: checked,
-                            ...(checked ? pushDefaultsFor(r.recording, r) : {}),
+                            ...(checked ? pushDefaultsFor(r.recording ? 'RECORDING' : 'ANNOUNCEMENT', r) : {}),
                           })
                         }
                       />
@@ -274,7 +274,7 @@ function ChatScheduleSection({
                           recording: e.target.checked,
                           ...(e.target.checked ? { reveal_fields: [] } : {}),
                           // 푸시 문구가 기본값 그대로면 유형에 맞는 기본값으로 바꾼다
-                          ...(r.push ? pushDefaultsFor(e.target.checked, r) : {}),
+                          ...(r.push ? pushDefaultsFor(e.target.checked ? 'RECORDING' : 'ANNOUNCEMENT', r) : {}),
                         })
                       }
                     >
@@ -356,7 +356,8 @@ export default function CreateRoomModal({ open, onClose, groups }: { open: boole
     }
     if (uploadingPhoto) return
     // 한 줄 = 미션 하나 + START 안내 하나. 촬영 미션이면 RECORDING (글이 촬영 주제이자 안내 글),
-    // 공개 항목이 있으면 PROFILE_REVEAL (글은 안내에만), 없으면 ANNOUNCEMENT
+    // 공개 항목이 있으면 PROFILE_REVEAL (글은 안내에만), 없으면 ANNOUNCEMENT.
+    // 1:1 대화(PAIR_CHAT)는 끝 시각 칸이 없는 여기선 만들지 않는다 (방 상세 [미션 추가]에서)
     const missions: RoomMissionBody[] = scheduleRows.map((r) => {
       const at = fmt(r.run_at!)
       const content = r.message_content.trim() ? r.message_content : null
