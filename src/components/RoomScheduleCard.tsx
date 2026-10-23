@@ -5,7 +5,7 @@ import type { MenuProps } from 'antd'
 import dayjs from 'dayjs'
 import { useRoomMissions, type RoomMissionRow } from '../api/queries'
 import type { AnnouncementStatus, MissionAnnouncement, RoomDetail, RoomMission } from '../api/types'
-import { REVEAL_LABEL, dayOf, startAnnouncementOf } from '../config/chatScheduleDefaults'
+import { REVEAL_LABEL, dayOf, missionTimeLabel, startAnnouncementOf } from '../config/chatScheduleDefaults'
 import { AnnouncementStatusTag, AnnouncementTypeTag, MissionStatusTag, MissionTypeTag } from './StatusTag'
 import MissionModal from './MissionModal'
 import AnnouncementModal from './AnnouncementModal'
@@ -70,6 +70,8 @@ export default function RoomScheduleCard({
 
   const scheduledCount = rows.filter((r) => r.mission.status === 'SCHEDULED').length
   const muted = { color: token.colorTextTertiary }
+  // 시각 칸 너비. 1:1 대화 줄은 '시작 ~ 끝'이라 넓어서, 그런 줄이 있으면 카드 안 모든 줄의 칸을 같이 넓힌다 (14px 숫자 한 자 ≈ 8.5px)
+  const timeWidth = Math.max(48, ...rows.map((r) => Math.ceil(missionTimeLabel(r.mission).length * 8.5)))
 
   const missionMenu = (m: RoomMission, start: MissionAnnouncement | null): MenuProps['items'] => {
     const items: NonNullable<MenuProps['items']> = []
@@ -106,8 +108,8 @@ export default function RoomScheduleCard({
           // 줄을 누르면 연다. 고칠 수 없는 미션은 읽기 전용으로 열린다
           onClick={(e) => notButton(e) && openMission(m, start)}
         >
-          <div style={{ width: 48, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-            {dayjs(m.opens_at).format('HH:mm')}
+          <div style={{ width: timeWidth, flexShrink: 0, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+            {missionTimeLabel(m)}
           </div>
           <div style={{ width: 92, flexShrink: 0 }}>
             <MissionTypeTag type={m.type} />
@@ -138,7 +140,8 @@ export default function RoomScheduleCard({
             ) : (
               fields.length === 0 && '-'
             )}
-            {m.closes_at && (
+            {/* 1:1 대화는 끝 시각을 시각 칸에 이미 보여준다 */}
+            {m.closes_at && m.type !== 'PAIR_CHAT' && (
               <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
                 {dayjs(m.closes_at).format('MM/DD HH:mm')} 마감
               </div>
@@ -180,7 +183,8 @@ export default function RoomScheduleCard({
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              padding: '4px 12px 8px 72px',
+              // 위 줄의 종류 칸에 맞춘다 (줄 여백 12 + 시각 칸 + 사이 12)
+              padding: `4px 12px 8px ${timeWidth + 24}px`,
               fontSize: 13,
               cursor: isPast(a) ? 'pointer' : undefined,
               color: isPast(a) ? token.colorTextTertiary : token.colorTextSecondary,

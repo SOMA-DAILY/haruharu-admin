@@ -212,7 +212,8 @@ export interface RoomInvite {
 }
 // 방 미션·안내 (BE #482 · #484 · #486). 예전 편성 한 줄 = 미션 하나 + 안내 하나
 export type RevealField = 'MBTI' | 'INTO_NOW' | 'AGE' | 'DEPARTMENT'
-export type MissionType = 'ANNOUNCEMENT' | 'PROFILE_REVEAL' | 'RECORDING'
+// PAIR_CHAT(1:1 대화, BE #540): opens_at~closes_at 동안 방 참가자끼리 1:1 채팅이 열린다. closes_at 필수
+export type MissionType = 'ANNOUNCEMENT' | 'PROFILE_REVEAL' | 'RECORDING' | 'PAIR_CHAT'
 export type MissionStatus = 'SCHEDULED' | 'OPEN' | 'CLOSED' | 'CANCELED'
 export type AnnouncementType = 'START' | 'REMINDER' | 'RESULT'
 export type AnnouncementStatus = 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELED' | 'FAILED'
@@ -223,7 +224,8 @@ export interface MissionImage {
   width: number
   height: number
 }
-// type 에 따라 한쪽만 온다: ANNOUNCEMENT·RECORDING = content(RECORDING 은 촬영 주제), PROFILE_REVEAL = reveal_fields
+// type 에 따라 한쪽만 온다: ANNOUNCEMENT·RECORDING = content(RECORDING 은 촬영 주제), PROFILE_REVEAL = reveal_fields,
+// PAIR_CHAT = 빈 객체 {} (다른 칸을 보내면 서버가 거절. 채팅 글은 START 안내로만 나간다)
 export interface MissionDetails {
   content?: string | null
   reveal_fields?: RevealField[] | null
@@ -235,7 +237,7 @@ export interface RoomMission {
   details: MissionDetails
   image: MissionImage | null
   opens_at: string
-  closes_at: string | null // null = 방 종료까지
+  closes_at: string | null // null = 방 종료까지 (PAIR_CHAT 은 항상 있음)
   effective_closes_at: string | null
   status: MissionStatus
   interaction_type: string
