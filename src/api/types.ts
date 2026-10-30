@@ -387,3 +387,14 @@ export interface AppUpdatePolicyHistory {
   changed_by: number
   changed_at: string
 }
+
+// 중간 참여 (BE #548 / admin #91)
+export interface ParticipationCandidate {
+  user_id: number; nickname: string | null; gender: Gender | null; video_count: number; last_video_uploaded_at: string | null;
+}
+export interface ParticipationCampaign {
+  campaign_id: number; room_id: number; seats: number; accepted_count: number; status: string; expires_at: string;
+  recipients: { invitation_id: number; user_id: number; status: string; delivery_version: number; delivered_at: string; accepted_at: string | null; declined_at: string | null }[];
+}
+export interface ParticipationAvailability { room_id: number; capacity: number; member_count: number; available: number; recruiting: boolean; final_selection_opens_at: string | null; default_expires_at: string | null; cohort_sequence: number | null }
+export interface ParticipationCampaignBody { seats: number; expires_at?: string; user_ids: number[] }

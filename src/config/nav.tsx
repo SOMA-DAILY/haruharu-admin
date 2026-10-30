@@ -26,6 +26,7 @@ export const navItems: NavItem[] = [
   { key: '/', label: '대시보드', icon: <DashboardOutlined />, group: '모니터링' },
   // 세션 배지는 AdminLayout에서 active_rooms.total(실데이터)로 주입
   { key: '/sessions', label: '세션(방) 관리', icon: <HomeOutlined />, group: '운영' },
+  { key: '/mid-participation', label: '중간 참여', icon: <UserOutlined />, group: '운영' },
   { key: '/users', label: '유저 관리', icon: <UserOutlined />, group: '운영' },
   { key: '/iap', label: '재화·결제(IAP)', icon: <CreditCardOutlined />, group: '운영' },
   {

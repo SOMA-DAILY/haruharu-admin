@@ -178,3 +178,14 @@ export const appUpdatePolicyApi = {
   update: (body: UpdateAppUpdatePolicyBody) => put<AppUpdatePolicy>('/app-update-policy', body),
   history: () => get<AppUpdatePolicyHistory[]>('/app-update-policy/history'),
 }
+
+export interface ParticipationCandidateQuery { keyword?: string; gender?: import('./types').Gender; page?: number; size?: number }
+export const midParticipationApi = {
+  candidates: (q: ParticipationCandidateQuery) => get<import('./types').Paged<import('./types').ParticipationCandidate>>('/mid-participation/candidates', q),
+  campaigns: (roomId: number) => get<import('./types').ParticipationCampaign[]>(`/rooms/${roomId}/mid-participation`),
+  availability: (roomId: number) => get<import('./types').ParticipationAvailability>(`/rooms/${roomId}/mid-participation/availability`),
+  create: (roomId: number, body: import('./types').ParticipationCampaignBody) => post<import('./types').ParticipationCampaign>(`/rooms/${roomId}/mid-participation`, body),
+  resend: (id: number) => post<import('./types').ParticipationCampaign>(`/mid-participation/campaigns/${id}/resend`),
+  cancel: (id: number) => post<import('./types').ParticipationCampaign>(`/mid-participation/campaigns/${id}/cancel`),
+  remove: (roomId: number, memberId: number, reason: string) => post<unknown>(`/rooms/${roomId}/members/${memberId}/remove`, { reason }),
+}
