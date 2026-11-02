@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node --experimental-strip-types --test tests/room-activity.test.mjs tests/mission-schedule.test.mjs",
+    "test": "node --experimental-strip-types --test tests/room-activity.test.mjs tests/mission-schedule.test.mjs tests/room-download.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "antd": "^6.5.0",
     "axios": "^1.18.1",
     "dayjs": "^1.11.21",
+    "fflate": "^0.8.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1"

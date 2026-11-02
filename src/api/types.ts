@@ -166,6 +166,7 @@ export interface RoomActivity {
   content: string | null
   video: ActivityVideo | null
   reaction_type: string | null
+  reply_type?: 'MESSAGE' | 'VIDEO' | null
   answer: string | null
   answered_at: string | null
 }
