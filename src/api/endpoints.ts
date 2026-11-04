@@ -39,6 +39,8 @@ import type {
   UserDetail,
   UserListItem,
   UserStatus,
+  AdminReport,
+  ReportStatus,
 } from './types'
 
 // ===== 인증 (#187) =====
@@ -177,4 +179,18 @@ export const appUpdatePolicyApi = {
   get: () => get<AppUpdatePolicy>('/app-update-policy'),
   update: (body: UpdateAppUpdatePolicyBody) => put<AppUpdatePolicy>('/app-update-policy', body),
   history: () => get<AppUpdatePolicyHistory[]>('/app-update-policy/history'),
+}
+
+// ===== 신고·안전 (#95 / BE #553) =====
+export interface ReportListQuery {
+  status?: ReportStatus
+  page?: number
+  size?: number
+}
+export const reportsApi = {
+  list: (q: ReportListQuery) => get<Paged<AdminReport>>('/reports', q),
+  detail: (reportId: number) => get<AdminReport>(`/reports/${reportId}`),
+  // 쓰기 (SUPER·OPERATOR). 승인 = 신고 SANCTIONED + 피신고자 BANNED
+  approve: (reportId: number) => post<AdminReport>(`/reports/${reportId}/approve`),
+  reject: (reportId: number) => post<AdminReport>(`/reports/${reportId}/reject`),
 }

@@ -1,11 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { appUpdatePolicyApi, adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
+import { appUpdatePolicyApi, adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
   RoomListQuery,
   RoomActivityQuery,
   UserListQuery,
+  ReportListQuery,
 } from './endpoints'
 import type {
   UpdateAppUpdatePolicyBody,
@@ -254,6 +255,25 @@ export function useUpdateAppUpdatePolicy() {
     onSuccess: (data) => {
       qc.setQueryData(['app-update-policy'], data)
       void qc.invalidateQueries({ queryKey: ['app-update-policy-history'] })
+    },
+  })
+}
+
+// ===== 신고·안전 (#95) =====
+export const useReports = (q: ReportListQuery) =>
+  useQuery({ queryKey: ['reports', q], queryFn: () => reportsApi.list(q) })
+export const useReport = (reportId: number | null) =>
+  useQuery({ queryKey: ['report', reportId], queryFn: () => reportsApi.detail(reportId as number), enabled: reportId != null })
+export function useResolveReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ reportId, action }: { reportId: number; action: 'approve' | 'reject' }) =>
+      action === 'approve' ? reportsApi.approve(reportId) : reportsApi.reject(reportId),
+    onSuccess: (_, { reportId }) => {
+      // 재조회를 기다리지 않는다 — 확인 모달이 응답 즉시 닫히게
+      void qc.invalidateQueries({ queryKey: ['reports'] })
+      void qc.invalidateQueries({ queryKey: ['report', reportId] })
+      void qc.invalidateQueries({ queryKey: ['user'] })
     },
   })
 }

@@ -13,6 +13,7 @@ import AuditPage from './pages/AuditPage'
 import DemoPage from './pages/DemoPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import AppUpdatePolicyPage from './pages/AppUpdatePolicyPage'
+import ReportsPage from './pages/ReportsPage'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/sessions/:id" element={<RoomDetailPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/:id" element={<UserDetailPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/iap" element={<IapPage />} />
           <Route path="/iap/:id" element={<PaymentDetailPage />} />
           <Route path="/demo" element={<DemoPage />} />
