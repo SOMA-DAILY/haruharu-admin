@@ -178,3 +178,22 @@ export const appUpdatePolicyApi = {
   update: (body: UpdateAppUpdatePolicyBody) => put<AppUpdatePolicy>('/app-update-policy', body),
   history: () => get<AppUpdatePolicyHistory[]>('/app-update-policy/history'),
 }
+
+// ===== 접속기록 (#96 / BE #554). 목록/요약/점검은 SUPER, 반출 사유 등록은 SUPER/OPERATOR =====
+export interface AuditLogQuery {
+  adminId?: number
+  action?: import('./types').AuditAction
+  targetType?: import('./types').AuditTargetType
+  targetId?: number
+  from?: string // YYYY-MM-DD
+  to?: string
+  page?: number
+  size?: number
+}
+export const auditApi = {
+  logs: (q: AuditLogQuery) => get<Paged<import('./types').AuditLog>>('/audit/logs', q),
+  summary: (q: { from?: string; to?: string }) => get<import('./types').AuditSummary>('/audit/summary', q),
+  reviews: () => get<import('./types').AuditReview[]>('/audit/reviews'),
+  createReview: (body: { period: string; note?: string }) => post<import('./types').AuditReview>('/audit/reviews', body),
+  registerExport: (body: import('./types').RegisterExportBody) => post<{ log_id: number }>('/audit/exports', body),
+}
