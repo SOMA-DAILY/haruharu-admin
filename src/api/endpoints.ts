@@ -10,8 +10,6 @@ import type {
   AssignGenderBody,
   CreateAdminAccountBody,
   CreateRoomBody,
-  DemoAccessCode,
-  SetDemoCodeBody,
   UpdateAdminAccountBody,
   DashboardMetrics,
   DashboardSummary,
@@ -165,12 +163,6 @@ export const adminsApi = {
   list: () => get<AdminAccount[]>('/admins'),
   create: (body: CreateAdminAccountBody) => post<AdminAccount>('/admins', body),
   update: (id: number, body: UpdateAdminAccountBody) => patch<AdminAccount>(`/admins/${id}`, body),
-}
-
-// ===== 데모 접근 코드 (SUPER 전용) =====
-export const demoApi = {
-  getCode: () => get<DemoAccessCode>('/demo/access-code'),
-  setCode: (body: SetDemoCodeBody) => put<DemoAccessCode>('/demo/access-code', body),
 }
 
 export const appUpdatePolicyApi = {
