@@ -1,11 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { appUpdatePolicyApi, adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
+import { appUpdatePolicyApi, adminsApi, auditApi, dashboardApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
   RoomListQuery,
   RoomActivityQuery,
   UserListQuery,
+  AuditLogQuery,
   ReportListQuery,
 } from './endpoints'
 import type {
@@ -18,7 +19,6 @@ import type {
   ReissueInviteBody,
   RoomMission,
   RoomMissionBody,
-  SetDemoCodeBody,
   UpdateAdminAccountBody,
 } from './types'
 
@@ -234,18 +234,6 @@ export const useUpdateAdminAccount = () => {
   })
 }
 
-// ===== 데모 접근 코드 =====
-export const useDemoCode = (enabled = true) =>
-  useQuery({ queryKey: ['demo', 'access-code'], queryFn: demoApi.getCode, enabled })
-
-export const useSetDemoCode = () => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (body: SetDemoCodeBody) => demoApi.setCode(body),
-    onSuccess: (data) => qc.setQueryData(['demo', 'access-code'], data),
-  })
-}
-
 export const useAppUpdatePolicy = () => useQuery({ queryKey: ['app-update-policy'], queryFn: appUpdatePolicyApi.get })
 export const useAppUpdatePolicyHistory = () => useQuery({ queryKey: ['app-update-policy-history'], queryFn: appUpdatePolicyApi.history })
 export function useUpdateAppUpdatePolicy() {
@@ -256,6 +244,21 @@ export function useUpdateAppUpdatePolicy() {
       qc.setQueryData(['app-update-policy'], data)
       void qc.invalidateQueries({ queryKey: ['app-update-policy-history'] })
     },
+  })
+}
+
+// ===== 접속기록 (#96) =====
+export const useAuditLogs = (q: AuditLogQuery, enabled = true) =>
+  useQuery({ queryKey: ['audit', 'logs', q], queryFn: () => auditApi.logs(q), enabled })
+export const useAuditSummary = (q: { from?: string; to?: string }, enabled = true) =>
+  useQuery({ queryKey: ['audit', 'summary', q], queryFn: () => auditApi.summary(q), enabled })
+export const useAuditReviews = (enabled = true) =>
+  useQuery({ queryKey: ['audit', 'reviews'], queryFn: auditApi.reviews, enabled })
+export function useCreateAuditReview() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: auditApi.createReview,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['audit'] }),
   })
 }
 

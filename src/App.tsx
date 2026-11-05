@@ -10,7 +10,6 @@ import UserDetailPage from './pages/UserDetailPage'
 import IapPage from './pages/IapPage'
 import PaymentDetailPage from './pages/PaymentDetailPage'
 import AuditPage from './pages/AuditPage'
-import DemoPage from './pages/DemoPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import AppUpdatePolicyPage from './pages/AppUpdatePolicyPage'
 import ReportsPage from './pages/ReportsPage'
@@ -29,7 +28,6 @@ export default function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/iap" element={<IapPage />} />
           <Route path="/iap/:id" element={<PaymentDetailPage />} />
-          <Route path="/demo" element={<DemoPage />} />
           <Route path="/audit" element={<AuditPage />} />
           <Route path="/updates/minimum-version" element={<AppUpdatePolicyPage />} />
           <Route

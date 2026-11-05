@@ -8,7 +8,6 @@ import {
   WarningOutlined,
   SettingOutlined,
   SafetyOutlined,
-  KeyOutlined,
   CloudUploadOutlined,
 } from '@ant-design/icons'
 
@@ -45,7 +44,6 @@ export const navItems: NavItem[] = [
     disabled: true,
     tag: '추후',
   },
-  { key: '/demo', label: '데모 코드', icon: <KeyOutlined />, group: '시스템' },
   { key: '/audit', label: '관리자·감사로그', icon: <SafetyOutlined />, group: '시스템' },
   { key: '/updates/minimum-version', label: '최소 버전 관리', icon: <CloudUploadOutlined />, group: '업데이트' },
 ]
