@@ -26,6 +26,7 @@ import { useAuth } from '../auth/AuthContext'
 import { RoomStatusTag, RoomInviteStatusTag, RoomTypeTag } from '../components/StatusTag'
 import { ApiError } from '../api/client'
 import type { RoomMember, RoomInvite, Gender } from '../api/types'
+import { RemoveRoomMemberButton } from '../components/RemoveRoomMemberButton'
 import RoomActivityPanel from '../components/RoomActivityPanel'
 import RoomSelectionPanel from '../components/RoomSelectionPanel'
 import RoomScheduleCard from '../components/RoomScheduleCard'
@@ -214,6 +215,7 @@ export default function RoomDetailPage() {
     },
     { title: '나이', dataIndex: 'age', width: 70, render: (v: number | null) => v ?? '-' },
     { title: '지역', dataIndex: 'region', width: 100, render: (v: string | null) => v ?? '-' },
+    { title: '관리', key: 'remove-member', render: (_, member) => canWrite ? <RemoveRoomMemberButton roomId={roomId} member={member} /> : null },
     { title: '참여시각', dataIndex: 'joined_at', render: (v: string) => dayjs(v).format('MM/DD HH:mm') },
   ]
 
@@ -277,7 +279,7 @@ export default function RoomDetailPage() {
                 </Descriptions.Item>
               </Descriptions>
             </Card>
-            <Card title={`참여자 (${data.members.length})`}>
+            <Card title={`참여자 (${data.members.length})`} extra={canWrite && <Button onClick={() => navigate(`/mid-participation?roomId=${roomId}`)}>중간 참여 제안</Button>}>
               <Table<RoomMember>
                 rowKey="member_id"
                 columns={memberColumns}
