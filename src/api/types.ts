@@ -67,15 +67,6 @@ export interface UpdateAdminAccountBody {
   status?: AdminAccountStatus
 }
 
-// ===== 데모 접근 코드 (SUPER 전용) =====
-export interface DemoAccessCode {
-  code: string | null
-  configured: boolean
-}
-export interface SetDemoCodeBody {
-  code: string
-}
-
 // ===== 대시보드 =====
 export interface DashboardSummary {
   active_rooms: { total: number; by_day: Record<string, number> }
@@ -387,4 +378,68 @@ export interface AppUpdatePolicyHistory {
   android_minimum_version: string | null
   changed_by: number
   changed_at: string
+}
+
+// ===== 접속기록 (#96 / BE #554) =====
+export type AuditAction =
+  | 'LOGIN' | 'LOGIN_FAIL' | 'LOGOUT'
+  | 'VIEW' | 'VIEW_USERS' | 'VIEW_USER' | 'VIEW_ROOMS' | 'VIEW_ROOM' | 'VIEW_ROOM_ACTIVITY' | 'VIEW_REPORTS' | 'VIEW_REPORT'
+  | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
+export type AuditTargetType =
+  | 'USER' | 'ROOM' | 'REPORT' | 'ADMIN' | 'COHORT' | 'RECRUIT_TRACK' | 'IAP_PRODUCT' | 'IAP_PURCHASE' | 'MID_PARTICIPATION_CAMPAIGN'
+export interface AuditAdmin {
+  id: number
+  name: string | null
+}
+export interface AuditLog {
+  log_id: number
+  occurred_at: string
+  admin: AuditAdmin | null // 로그인 실패는 null
+  ip: string | null
+  action: AuditAction
+  target_type: AuditTargetType | null
+  target_id: number | null
+  method: string
+  path: string
+  status_code: number
+  reason: string | null // 반출 사유
+  detail: string | null // 반출 범위, 로그인 실패 이메일
+}
+export interface AuditSummary {
+  from: string
+  to: string
+  heavy_view_threshold: number
+  per_admin: { admin: AuditAdmin; views: number; exports: number }[]
+  heavy_viewers: { admin: AuditAdmin; date: string; count: number }[]
+}
+export interface AuditReview {
+  review_id: number
+  period: string
+  admin: AuditAdmin
+  note: string | null
+  reviewed_at: string
+}
+export interface RegisterExportBody {
+  target_type: AuditTargetType
+  target_id: number
+  scope?: string
+  reason: string
+}
+
+// ===== 신고·안전 (#95 / BE #553) =====
+export type ReportStatus = 'RECEIVED' | 'SANCTIONED' | 'REJECTED'
+export type ReportReason = 'CHILD_SAFETY' | 'INAPPROPRIATE_MEDIA' | 'ABUSIVE_LANGUAGE' | 'FAKE_PROFILE' | 'SPAM_AD' | 'OTHER'
+export interface AdminReport {
+  report_id: number
+  created_at: string
+  status: ReportStatus
+  reason: ReportReason
+  detail: string | null
+  question_id: number | null
+  room_id: number | null // 신고가 난 방. 질문 신고는 질문의 방, 사용자 신고는 두 사람이 함께 있던 최근 방
+  resolved_by_admin_id: number | null
+  resolved_at: string | null
+  reporter: { user_id: number; nickname: string | null }
+  reported: { user_id: number; nickname: string | null; status: UserStatus | null; room_ids: number[] }
+  reported_user_report_count: number | null // 목록에선 null, 상세에만
 }

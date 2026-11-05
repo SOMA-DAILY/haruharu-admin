@@ -9,7 +9,6 @@ import {
   Input,
   Select,
   Alert,
-  Result,
   App,
 } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
@@ -19,6 +18,7 @@ import { PageHeader } from '../layout/AdminLayout'
 import { useAuth } from '../auth/AuthContext'
 import { useAdminAccounts, useCreateAdminAccount, useUpdateAdminAccount } from '../api/queries'
 import { RoleTag, AdminStatusTag } from '../components/StatusTag'
+import AuditLogPanel from '../components/AuditLogPanel'
 import { ApiError } from '../api/client'
 import type { AdminAccount, Role, AdminAccountStatus } from '../api/types'
 
@@ -192,12 +192,10 @@ export default function AuditPage() {
             {
               key: 'audit',
               label: '감사로그',
-              children: (
-                <Result
-                  status="info"
-                  title="백엔드 API 연동 대기"
-                  subTitle="감사로그(admin_audit_logs) 조회 API는 백엔드 후속입니다."
-                />
+              children: isSuper ? (
+                <AuditLogPanel />
+              ) : (
+                <Alert type="warning" showIcon message="SUPER 권한 전용" description="접속기록은 SUPER 역할만 볼 수 있습니다." />
               ),
             },
           ]}

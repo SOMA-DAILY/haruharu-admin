@@ -11,6 +11,7 @@ import type {
   AnnouncementType,
   MissionStatus,
   MissionType,
+  ReportStatus,
 } from '../api/types'
 import { ANNOUNCEMENT_TYPE_LABEL, MISSION_TYPE_LABEL } from '../config/chatScheduleDefaults'
 
@@ -111,4 +112,14 @@ export function MissionTypeTag({ type }: { type: MissionType }) {
 }
 export function AnnouncementTypeTag({ type }: { type: AnnouncementType }) {
   return <Tag>{ANNOUNCEMENT_TYPE_LABEL[type] ?? type}</Tag>
+}
+
+const REPORT_STATUS_MAP: Record<ReportStatus, { color: string; label: string }> = {
+  RECEIVED: { color: 'gold', label: '접수' },
+  SANCTIONED: { color: 'red', label: '제재' },
+  REJECTED: { color: 'default', label: '기각' },
+}
+export function ReportStatusTag({ status }: { status: ReportStatus }) {
+  const m = REPORT_STATUS_MAP[status]
+  return <Tag color={m.color}>{m.label}</Tag>
 }

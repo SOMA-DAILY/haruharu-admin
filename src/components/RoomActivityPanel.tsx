@@ -148,7 +148,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
   const { token } = theme.useToken()
   const qc = useQueryClient()
   const [day, setDay] = useState<number>()
-  const [userId, setUserId] = useState<number>()
+  const [userId, setUserId] = useState<number | undefined>(() => { const v = new URLSearchParams(window.location.search).get('userId'); return v ? Number(v) : undefined })
   const [type, setType] = useState<RoomActivityType | undefined>('VIDEO')
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
   const [video, setVideo] = useState<ActivityVideo | null>(null)

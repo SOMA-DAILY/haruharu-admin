@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { useDashboardMetrics, useDashboardSummary } from '../api/queries'
 import type { DashboardMetrics } from '../api/types'
+import ReportQueueCard from '../components/ReportQueueCard'
 import './DashboardPage.css'
 
 // API 없는 섹션 공통 래퍼: 목업 비주얼은 유지하되 회색+마스크로 "추후" 표시
@@ -271,11 +272,7 @@ export default function DashboardPage() {
                       <span className="hint">③ 안전 관리</span>
                     </div>
                     <div className="pb">
-                      <div className="empty-lock">
-                        <div className="lk">🔒</div>
-                        <b>아직 활성화되지 않았어요</b>
-                        <small>신고(reports) 스키마·콘텐츠 도메인 구현 후 자동 연동됩니다</small>
-                      </div>
+                      <ReportQueueCard />
                     </div>
                   </div>
                 </div>
