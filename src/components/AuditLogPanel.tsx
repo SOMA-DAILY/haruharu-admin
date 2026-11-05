@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Button, Card, Col, DatePicker, Empty, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Table, Tag, Typography, App } from 'antd'
+import { Alert, Button, Card, Col, DatePicker, Empty, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Table, Tag, Typography, App, theme } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Link } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -37,6 +37,7 @@ function Target({ type, id }: { type: AuditTargetType | null; id: number | null 
 
 /** 개인정보 접속기록 (#96, 안전성 확보조치 기준 제8조). SUPER 전용. */
 export default function AuditLogPanel() {
+  const { token } = theme.useToken()
   const { message } = App.useApp()
   const [range, setRange] = useState<[Dayjs, Dayjs]>([dayjs().subtract(6, 'day'), dayjs()])
   const [adminId, setAdminId] = useState<number>()
@@ -95,12 +96,12 @@ export default function AuditLogPanel() {
         </Col>
         <Col span={8}>
           <Card size="small" hoverable onClick={() => { setAction('EXPORT'); reset() }}>
-            <Statistic title="반출 수" value={totals.exports} loading={summary.isLoading} styles={totals.exports ? { content: { color: '#cf1322' } } : undefined} />
+            <Statistic title="반출 수" value={totals.exports} loading={summary.isLoading} styles={totals.exports ? { content: { color: token.colorError } } : undefined} />
           </Card>
         </Col>
         <Col span={8}>
           <Card size="small" hoverable onClick={() => { const h = summary.data?.heavy_viewers[0]; if (h) { setAdminId(h.admin.id); reset() } }}>
-            <Statistic title={`대량 조회 관리자 (하루 ${summary.data?.heavy_view_threshold ?? 200}건 이상)`} value={heavyAdmins} loading={summary.isLoading} styles={heavyAdmins ? { content: { color: '#cf1322' } } : undefined} />
+            <Statistic title={`대량 조회 관리자 (하루 ${summary.data?.heavy_view_threshold ?? 200}건 이상)`} value={heavyAdmins} loading={summary.isLoading} styles={heavyAdmins ? { content: { color: token.colorError } } : undefined} />
           </Card>
         </Col>
       </Row>
