@@ -18,7 +18,6 @@ import { PageHeader } from '../layout/AdminLayout'
 import { useAuth } from '../auth/AuthContext'
 import { useAdminAccounts, useCreateAdminAccount, useUpdateAdminAccount } from '../api/queries'
 import { RoleTag, AdminStatusTag } from '../components/StatusTag'
-import AuditLogPanel from '../components/AuditLogPanel'
 import { ApiError } from '../api/client'
 import type { AdminAccount, Role, AdminAccountStatus } from '../api/types'
 
@@ -187,15 +186,6 @@ export default function AuditPage() {
                   message="SUPER 권한 전용"
                   description="관리자 계정 관리는 SUPER 역할만 접근할 수 있습니다."
                 />
-              ),
-            },
-            {
-              key: 'audit',
-              label: '감사로그',
-              children: isSuper ? (
-                <AuditLogPanel />
-              ) : (
-                <Alert type="warning" showIcon message="SUPER 권한 전용" description="접속기록은 SUPER 역할만 볼 수 있습니다." />
               ),
             },
           ]}

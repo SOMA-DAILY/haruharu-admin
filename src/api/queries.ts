@@ -1,12 +1,11 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { appUpdatePolicyApi, adminsApi, auditApi, dashboardApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
+import { appUpdatePolicyApi, adminsApi, dashboardApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
   RoomListQuery,
   RoomActivityQuery,
   UserListQuery,
-  AuditLogQuery,
   ReportListQuery,
 } from './endpoints'
 import type {
@@ -244,21 +243,6 @@ export function useUpdateAppUpdatePolicy() {
       qc.setQueryData(['app-update-policy'], data)
       void qc.invalidateQueries({ queryKey: ['app-update-policy-history'] })
     },
-  })
-}
-
-// ===== 접속기록 (#96) =====
-export const useAuditLogs = (q: AuditLogQuery, enabled = true) =>
-  useQuery({ queryKey: ['audit', 'logs', q], queryFn: () => auditApi.logs(q), enabled })
-export const useAuditSummary = (q: { from?: string; to?: string }, enabled = true) =>
-  useQuery({ queryKey: ['audit', 'summary', q], queryFn: () => auditApi.summary(q), enabled })
-export const useAuditReviews = (enabled = true) =>
-  useQuery({ queryKey: ['audit', 'reviews'], queryFn: auditApi.reviews, enabled })
-export function useCreateAuditReview() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: auditApi.createReview,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['audit'] }),
   })
 }
 

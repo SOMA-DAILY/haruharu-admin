@@ -380,45 +380,9 @@ export interface AppUpdatePolicyHistory {
   changed_at: string
 }
 
-// ===== 접속기록 (#96 / BE #554) =====
-export type AuditAction =
-  | 'LOGIN' | 'LOGIN_FAIL' | 'LOGOUT'
-  | 'VIEW' | 'VIEW_USERS' | 'VIEW_USER' | 'VIEW_ROOMS' | 'VIEW_ROOM' | 'VIEW_ROOM_ACTIVITY' | 'VIEW_REPORTS' | 'VIEW_REPORT'
-  | 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
+// ===== 반출 사유 기록 (#96 / BE #554) =====
 export type AuditTargetType =
   | 'USER' | 'ROOM' | 'REPORT' | 'ADMIN' | 'COHORT' | 'RECRUIT_TRACK' | 'IAP_PRODUCT' | 'IAP_PURCHASE' | 'MID_PARTICIPATION_CAMPAIGN'
-export interface AuditAdmin {
-  id: number
-  name: string | null
-}
-export interface AuditLog {
-  log_id: number
-  occurred_at: string
-  admin: AuditAdmin | null // 로그인 실패는 null
-  ip: string | null
-  action: AuditAction
-  target_type: AuditTargetType | null
-  target_id: number | null
-  method: string
-  path: string
-  status_code: number
-  reason: string | null // 반출 사유
-  detail: string | null // 반출 범위, 로그인 실패 이메일
-}
-export interface AuditSummary {
-  from: string
-  to: string
-  heavy_view_threshold: number
-  per_admin: { admin: AuditAdmin; views: number; exports: number }[]
-  heavy_viewers: { admin: AuditAdmin; date: string; count: number }[]
-}
-export interface AuditReview {
-  review_id: number
-  period: string
-  admin: AuditAdmin
-  note: string | null
-  reviewed_at: string
-}
 export interface RegisterExportBody {
   target_type: AuditTargetType
   target_id: number
