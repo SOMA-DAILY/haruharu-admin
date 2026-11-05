@@ -35,14 +35,7 @@ export const navItems: NavItem[] = [
     disabled: true,
     tag: '추후',
   },
-  {
-    key: '/reports',
-    label: '신고·안전',
-    icon: <WarningOutlined />,
-    group: '운영',
-    disabled: true,
-    tag: '준비중',
-  },
+  { key: '/reports', label: '신고·안전', icon: <WarningOutlined />, group: '운영' },
   {
     key: '/policy',
     label: '정책값 관리',

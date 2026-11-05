@@ -425,3 +425,21 @@ export interface RegisterExportBody {
   scope?: string
   reason: string
 }
+
+// ===== 신고·안전 (#95 / BE #553) =====
+export type ReportStatus = 'RECEIVED' | 'SANCTIONED' | 'REJECTED'
+export type ReportReason = 'CHILD_SAFETY' | 'INAPPROPRIATE_MEDIA' | 'ABUSIVE_LANGUAGE' | 'FAKE_PROFILE' | 'SPAM_AD' | 'OTHER'
+export interface AdminReport {
+  report_id: number
+  created_at: string
+  status: ReportStatus
+  reason: ReportReason
+  detail: string | null
+  question_id: number | null
+  room_id: number | null // 신고가 난 방. 질문 신고는 질문의 방, 사용자 신고는 두 사람이 함께 있던 최근 방
+  resolved_by_admin_id: number | null
+  resolved_at: string | null
+  reporter: { user_id: number; nickname: string | null }
+  reported: { user_id: number; nickname: string | null; status: UserStatus | null; room_ids: number[] }
+  reported_user_report_count: number | null // 목록에선 null, 상세에만
+}

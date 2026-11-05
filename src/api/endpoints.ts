@@ -37,6 +37,8 @@ import type {
   UserDetail,
   UserListItem,
   UserStatus,
+  AdminReport,
+  ReportStatus,
 } from './types'
 
 // ===== 인증 (#187) =====
@@ -188,4 +190,18 @@ export const auditApi = {
   reviews: () => get<import('./types').AuditReview[]>('/audit/reviews'),
   createReview: (body: { period: string; note?: string }) => post<import('./types').AuditReview>('/audit/reviews', body),
   registerExport: (body: import('./types').RegisterExportBody) => post<{ log_id: number }>('/audit/exports', body),
+}
+
+// ===== 신고·안전 (#95 / BE #553) =====
+export interface ReportListQuery {
+  status?: ReportStatus
+  page?: number
+  size?: number
+}
+export const reportsApi = {
+  list: (q: ReportListQuery) => get<Paged<AdminReport>>('/reports', q),
+  detail: (reportId: number) => get<AdminReport>(`/reports/${reportId}`),
+  // 쓰기 (SUPER·OPERATOR). 승인 = 신고 SANCTIONED + 피신고자 BANNED
+  approve: (reportId: number) => post<AdminReport>(`/reports/${reportId}/approve`),
+  reject: (reportId: number) => post<AdminReport>(`/reports/${reportId}/reject`),
 }
