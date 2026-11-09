@@ -11,6 +11,7 @@ import type {
   AnnouncementType,
   MissionStatus,
   MissionType,
+  ReportStatus,
 } from '../api/types'
 import { ANNOUNCEMENT_TYPE_LABEL, MISSION_TYPE_LABEL } from '../config/chatScheduleDefaults'
 
@@ -116,4 +117,14 @@ export function AnnouncementTypeTag({ type }: { type: AnnouncementType }) {
 const participationLabels: Record<string, string> = { OPEN: '모집 중', AVAILABLE: '참여 가능', FULL: '인원 마감', EXPIRED: '시간 마감', CANCELLED: '취소', PENDING: '미응답', ACCEPTED: '수락', DECLINED: '패스', DISABLED: '수신 해제' }
 export function ParticipationStatusTag({ status }: { status: string }) {
   return <Tag color={status === 'ACCEPTED' ? 'green' : status === 'OPEN' || status === 'AVAILABLE' ? 'blue' : 'default'}>{participationLabels[status] ?? status}</Tag>
+}
+
+const REPORT_STATUS_MAP: Record<ReportStatus, { color: string; label: string }> = {
+  RECEIVED: { color: 'gold', label: '접수' },
+  SANCTIONED: { color: 'red', label: '제재' },
+  REJECTED: { color: 'default', label: '기각' },
+}
+export function ReportStatusTag({ status }: { status: ReportStatus }) {
+  const m = REPORT_STATUS_MAP[status]
+  return <Tag color={m.color}>{m.label}</Tag>
 }

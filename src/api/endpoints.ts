@@ -10,8 +10,6 @@ import type {
   AssignGenderBody,
   CreateAdminAccountBody,
   CreateRoomBody,
-  DemoAccessCode,
-  SetDemoCodeBody,
   UpdateAdminAccountBody,
   DashboardMetrics,
   DashboardSummary,
@@ -39,6 +37,8 @@ import type {
   UserDetail,
   UserListItem,
   UserStatus,
+  AdminReport,
+  ReportStatus,
 } from './types'
 
 // ===== 인증 (#187) =====
@@ -167,12 +167,6 @@ export const adminsApi = {
   update: (id: number, body: UpdateAdminAccountBody) => patch<AdminAccount>(`/admins/${id}`, body),
 }
 
-// ===== 데모 접근 코드 (SUPER 전용) =====
-export const demoApi = {
-  getCode: () => get<DemoAccessCode>('/demo/access-code'),
-  setCode: (body: SetDemoCodeBody) => put<DemoAccessCode>('/demo/access-code', body),
-}
-
 export const appUpdatePolicyApi = {
   get: () => get<AppUpdatePolicy>('/app-update-policy'),
   update: (body: UpdateAppUpdatePolicyBody) => put<AppUpdatePolicy>('/app-update-policy', body),
@@ -188,4 +182,23 @@ export const midParticipationApi = {
   resend: (id: number) => post<import('./types').ParticipationCampaign>(`/mid-participation/campaigns/${id}/resend`),
   cancel: (id: number) => post<import('./types').ParticipationCampaign>(`/mid-participation/campaigns/${id}/cancel`),
   remove: (roomId: number, memberId: number, reason: string) => post<unknown>(`/rooms/${roomId}/members/${memberId}/remove`, { reason }),
+}
+
+// ===== 반출 사유 기록 (#96 / BE #554, SUPER/OPERATOR). 접속기록은 서버에만 남기고 화면엔 안 보임(#99) =====
+export const auditApi = {
+  registerExport: (body: import('./types').RegisterExportBody) => post<{ log_id: number }>('/audit/exports', body),
+}
+
+// ===== 신고·안전 (#95 / BE #553) =====
+export interface ReportListQuery {
+  status?: ReportStatus
+  page?: number
+  size?: number
+}
+export const reportsApi = {
+  list: (q: ReportListQuery) => get<Paged<AdminReport>>('/reports', q),
+  detail: (reportId: number) => get<AdminReport>(`/reports/${reportId}`),
+  // 쓰기 (SUPER·OPERATOR). 승인 = 신고 SANCTIONED + 피신고자 BANNED
+  approve: (reportId: number) => post<AdminReport>(`/reports/${reportId}/approve`),
+  reject: (reportId: number) => post<AdminReport>(`/reports/${reportId}/reject`),
 }

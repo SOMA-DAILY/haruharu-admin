@@ -1,11 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { midParticipationApi, appUpdatePolicyApi, adminsApi, dashboardApi, demoApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi } from './endpoints'
+import { midParticipationApi, appUpdatePolicyApi, adminsApi, dashboardApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
   RoomListQuery,
   RoomActivityQuery,
   UserListQuery,
+  ReportListQuery,
 } from './endpoints'
 import type {
   UpdateAppUpdatePolicyBody,
@@ -17,7 +18,6 @@ import type {
   ReissueInviteBody,
   RoomMission,
   RoomMissionBody,
-  SetDemoCodeBody,
   UpdateAdminAccountBody,
 } from './types'
 
@@ -233,18 +233,6 @@ export const useUpdateAdminAccount = () => {
   })
 }
 
-// ===== 데모 접근 코드 =====
-export const useDemoCode = (enabled = true) =>
-  useQuery({ queryKey: ['demo', 'access-code'], queryFn: demoApi.getCode, enabled })
-
-export const useSetDemoCode = () => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (body: SetDemoCodeBody) => demoApi.setCode(body),
-    onSuccess: (data) => qc.setQueryData(['demo', 'access-code'], data),
-  })
-}
-
 export const useAppUpdatePolicy = () => useQuery({ queryKey: ['app-update-policy'], queryFn: appUpdatePolicyApi.get })
 export const useAppUpdatePolicyHistory = () => useQuery({ queryKey: ['app-update-policy-history'], queryFn: appUpdatePolicyApi.history })
 export function useUpdateAppUpdatePolicy() {
@@ -273,4 +261,23 @@ export function useRemoveRoomMember(roomId: number) {
   const qc = useQueryClient()
   return useMutation({ mutationFn: ({ memberId, reason }: { memberId: number; reason: string }) => midParticipationApi.remove(roomId, memberId, reason),
     onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['room', roomId] }), qc.invalidateQueries({ queryKey: ['rooms'] }), qc.invalidateQueries({ queryKey: ['mid-participation'] })]) })
+}
+
+// ===== 신고·안전 (#95) =====
+export const useReports = (q: ReportListQuery) =>
+  useQuery({ queryKey: ['reports', q], queryFn: () => reportsApi.list(q) })
+export const useReport = (reportId: number | null) =>
+  useQuery({ queryKey: ['report', reportId], queryFn: () => reportsApi.detail(reportId as number), enabled: reportId != null })
+export function useResolveReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ reportId, action }: { reportId: number; action: 'approve' | 'reject' }) =>
+      action === 'approve' ? reportsApi.approve(reportId) : reportsApi.reject(reportId),
+    onSuccess: (_, { reportId }) => {
+      // 재조회를 기다리지 않는다 — 확인 모달이 응답 즉시 닫히게
+      void qc.invalidateQueries({ queryKey: ['reports'] })
+      void qc.invalidateQueries({ queryKey: ['report', reportId] })
+      void qc.invalidateQueries({ queryKey: ['user'] })
+    },
+  })
 }

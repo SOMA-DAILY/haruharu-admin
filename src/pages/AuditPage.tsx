@@ -9,7 +9,6 @@ import {
   Input,
   Select,
   Alert,
-  Result,
   App,
 } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
@@ -186,17 +185,6 @@ export default function AuditPage() {
                   showIcon
                   message="SUPER 권한 전용"
                   description="관리자 계정 관리는 SUPER 역할만 접근할 수 있습니다."
-                />
-              ),
-            },
-            {
-              key: 'audit',
-              label: '감사로그',
-              children: (
-                <Result
-                  status="info"
-                  title="백엔드 API 연동 대기"
-                  subTitle="감사로그(admin_audit_logs) 조회 API는 백엔드 후속입니다."
                 />
               ),
             },

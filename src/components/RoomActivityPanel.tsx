@@ -8,6 +8,7 @@ import { useRoomActivities, useRoomActivitySummary } from '../api/queries'
 import type { ActivityVideo, RoomActivity, RoomActivitySummary, RoomActivityType, RoomDetail } from '../api/types'
 import { fetchRoomActivitySnapshot } from '../api/roomActivitySnapshot'
 import VideoBoard from './room-activity/VideoBoard'
+import RoomDownloadModal from './RoomDownloadModal'
 import { buildSlots, reactionEmoji } from './room-activity/model'
 import './RoomActivityPanel.css'
 
@@ -147,7 +148,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
   const { token } = theme.useToken()
   const qc = useQueryClient()
   const [day, setDay] = useState<number>()
-  const [userId, setUserId] = useState<number>()
+  const [userId, setUserId] = useState<number | undefined>(() => { const v = new URLSearchParams(window.location.search).get('userId'); return v ? Number(v) : undefined })
   const [type, setType] = useState<RoomActivityType | undefined>('VIDEO')
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
   const [video, setVideo] = useState<ActivityVideo | null>(null)
@@ -244,6 +245,7 @@ export default function RoomActivityPanel({ room }: { room: RoomDetail }) {
       <div className="activity-filters">
         <Title level={4} style={{ margin: 0 }}>방 활동</Title>
         <Space wrap>
+          <RoomDownloadModal room={room} activityDay={day} activityUserId={userId} />
           <Select aria-label="활동 일차" value={day ?? 0} style={{ minWidth: 130 }} onChange={v => setDay(v || undefined)} options={[{ value: 0, label: '전체 일차' }, ...Array.from({ length: room.total_days }, (_, i) => ({ value: i + 1, label: `${i + 1}일차` }))]} />
           <Select aria-label="활동 참여자" placeholder="전체 참여자" allowClear value={userId} style={{ minWidth: 180 }} onChange={v => setUserId(v)} options={room.members.map(m => ({ value: m.user_id, label: m.pseudonym || m.nickname || `참여자 #${m.user_id}` }))} />
           {(day != null || userId != null) && <Button type="text" onClick={() => { setDay(undefined); setUserId(undefined) }}>필터 초기화</Button>}

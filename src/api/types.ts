@@ -67,15 +67,6 @@ export interface UpdateAdminAccountBody {
   status?: AdminAccountStatus
 }
 
-// ===== 데모 접근 코드 (SUPER 전용) =====
-export interface DemoAccessCode {
-  code: string | null
-  configured: boolean
-}
-export interface SetDemoCodeBody {
-  code: string
-}
-
 // ===== 대시보드 =====
 export interface DashboardSummary {
   active_rooms: { total: number; by_day: Record<string, number> }
@@ -166,6 +157,7 @@ export interface RoomActivity {
   content: string | null
   video: ActivityVideo | null
   reaction_type: string | null
+  reply_type?: 'MESSAGE' | 'VIDEO' | null
   answer: string | null
   answered_at: string | null
 }
@@ -398,3 +390,31 @@ export interface ParticipationCampaign {
 }
 export interface ParticipationAvailability { room_id: number; capacity: number; member_count: number; available: number; recruiting: boolean; final_selection_opens_at: string | null; default_expires_at: string | null; cohort_sequence: number | null }
 export interface ParticipationCampaignBody { seats: number; expires_at?: string; user_ids: number[] }
+
+// ===== 반출 사유 기록 (#96 / BE #554) =====
+export type AuditTargetType =
+  | 'USER' | 'ROOM' | 'REPORT' | 'ADMIN' | 'COHORT' | 'RECRUIT_TRACK' | 'IAP_PRODUCT' | 'IAP_PURCHASE' | 'MID_PARTICIPATION_CAMPAIGN'
+export interface RegisterExportBody {
+  target_type: AuditTargetType
+  target_id: number
+  scope?: string
+  reason: string
+}
+
+// ===== 신고·안전 (#95 / BE #553) =====
+export type ReportStatus = 'RECEIVED' | 'SANCTIONED' | 'REJECTED'
+export type ReportReason = 'CHILD_SAFETY' | 'INAPPROPRIATE_MEDIA' | 'ABUSIVE_LANGUAGE' | 'FAKE_PROFILE' | 'SPAM_AD' | 'OTHER'
+export interface AdminReport {
+  report_id: number
+  created_at: string
+  status: ReportStatus
+  reason: ReportReason
+  detail: string | null
+  question_id: number | null
+  room_id: number | null // 신고가 난 방. 질문 신고는 질문의 방, 사용자 신고는 두 사람이 함께 있던 최근 방
+  resolved_by_admin_id: number | null
+  resolved_at: string | null
+  reporter: { user_id: number; nickname: string | null }
+  reported: { user_id: number; nickname: string | null; status: UserStatus | null; room_ids: number[] }
+  reported_user_report_count: number | null // 목록에선 null, 상세에만
+}
