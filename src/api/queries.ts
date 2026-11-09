@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { appUpdatePolicyApi, adminsApi, dashboardApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
+import { midParticipationApi, appUpdatePolicyApi, adminsApi, dashboardApi, iapApi, missionImagesApi, roomMissionsApi, roomsApi, usersApi, reportsApi } from './endpoints'
 import type {
   IapPurchaseQuery,
   MetricsQuery,
@@ -244,6 +244,23 @@ export function useUpdateAppUpdatePolicy() {
       void qc.invalidateQueries({ queryKey: ['app-update-policy-history'] })
     },
   })
+}
+
+export const useMidCandidates = (q: import('./endpoints').ParticipationCandidateQuery) => useQuery({ queryKey: ['mid-participation', 'candidates', q], queryFn: () => midParticipationApi.candidates(q) })
+export const useMidCampaigns = (roomId: number) => useQuery({ queryKey: ['mid-participation', 'campaigns', roomId], queryFn: () => midParticipationApi.campaigns(roomId), enabled: roomId > 0, refetchInterval: 15000 })
+export const useMidAvailability = (roomId: number) => useQuery({ queryKey: ['mid-participation', 'availability', roomId], queryFn: () => midParticipationApi.availability(roomId), enabled: roomId > 0, refetchInterval: 15000 })
+export function useMidActions(roomId: number) {
+  const qc = useQueryClient()
+  const refresh = () => qc.invalidateQueries({ queryKey: ['mid-participation'] })
+  const create = useMutation({ mutationFn: (body: import('./types').ParticipationCampaignBody) => midParticipationApi.create(roomId, body), onSuccess: refresh })
+  const resend = useMutation({ mutationFn: midParticipationApi.resend, onSuccess: refresh })
+  const cancel = useMutation({ mutationFn: midParticipationApi.cancel, onSuccess: refresh })
+  return { create, resend, cancel }
+}
+export function useRemoveRoomMember(roomId: number) {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: ({ memberId, reason }: { memberId: number; reason: string }) => midParticipationApi.remove(roomId, memberId, reason),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['room', roomId] }), qc.invalidateQueries({ queryKey: ['rooms'] }), qc.invalidateQueries({ queryKey: ['mid-participation'] })]) })
 }
 
 // ===== 신고·안전 (#95) =====

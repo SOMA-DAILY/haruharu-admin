@@ -3,6 +3,7 @@ import AdminLayout from './layout/AdminLayout'
 import ProtectedRoute from './auth/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import MidParticipationPage from './pages/MidParticipationPage'
 import SessionsPage from './pages/SessionsPage'
 import RoomDetailPage from './pages/RoomDetailPage'
 import UsersPage from './pages/UsersPage'
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/sessions/:id" element={<RoomDetailPage />} />
+          <Route path="/mid-participation" element={<MidParticipationPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/:id" element={<UserDetailPage />} />
           <Route path="/reports" element={<ReportsPage />} />

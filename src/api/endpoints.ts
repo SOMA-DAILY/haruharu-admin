@@ -173,6 +173,17 @@ export const appUpdatePolicyApi = {
   history: () => get<AppUpdatePolicyHistory[]>('/app-update-policy/history'),
 }
 
+export interface ParticipationCandidateQuery { keyword?: string; gender?: import('./types').Gender; page?: number; size?: number }
+export const midParticipationApi = {
+  candidates: (q: ParticipationCandidateQuery) => get<import('./types').Paged<import('./types').ParticipationCandidate>>('/mid-participation/candidates', q),
+  campaigns: (roomId: number) => get<import('./types').ParticipationCampaign[]>(`/rooms/${roomId}/mid-participation`),
+  availability: (roomId: number) => get<import('./types').ParticipationAvailability>(`/rooms/${roomId}/mid-participation/availability`),
+  create: (roomId: number, body: import('./types').ParticipationCampaignBody) => post<import('./types').ParticipationCampaign>(`/rooms/${roomId}/mid-participation`, body),
+  resend: (id: number) => post<import('./types').ParticipationCampaign>(`/mid-participation/campaigns/${id}/resend`),
+  cancel: (id: number) => post<import('./types').ParticipationCampaign>(`/mid-participation/campaigns/${id}/cancel`),
+  remove: (roomId: number, memberId: number, reason: string) => post<unknown>(`/rooms/${roomId}/members/${memberId}/remove`, { reason }),
+}
+
 // ===== 반출 사유 기록 (#96 / BE #554, SUPER/OPERATOR). 접속기록은 서버에만 남기고 화면엔 안 보임(#99) =====
 export const auditApi = {
   registerExport: (body: import('./types').RegisterExportBody) => post<{ log_id: number }>('/audit/exports', body),
