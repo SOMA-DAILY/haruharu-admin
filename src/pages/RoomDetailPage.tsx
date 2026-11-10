@@ -15,13 +15,14 @@ import {
   DatePicker,
   Typography,
   App,
+  Switch,
 } from 'antd'
 import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import dayjs, { type Dayjs } from 'dayjs'
 import { PageHeader } from '../layout/AdminLayout'
-import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType, useRoomGroups, useAssignRoomOrganization } from '../api/queries'
+import { useRoom, useRoomInvites, useCancelRoom, useReissueInvite, useAssignGender, useUpdateRoomType, useUpdateRoomReplyRecommendation, useRoomGroups, useAssignRoomOrganization } from '../api/queries'
 import { useAuth } from '../auth/AuthContext'
 import { RoomStatusTag, RoomInviteStatusTag, RoomTypeTag } from '../components/StatusTag'
 import { ApiError } from '../api/client'
@@ -143,6 +144,7 @@ export default function RoomDetailPage() {
   const groupQuery = useRoomGroups()
   const organizationMut = useAssignRoomOrganization()
   const typeMut = useUpdateRoomType(roomId)
+  const replyRecoMut = useUpdateRoomReplyRecommendation(roomId)
 
   if (isError) return <Alert type="error" message="방 정보를 찾을 수 없습니다." showIcon />
 
@@ -182,6 +184,24 @@ export default function RoomDetailPage() {
       message.error(e instanceof ApiError && e.code !== 'NETWORK' ? e.message : '방 구분 변경에 실패했습니다.')
     }
   }
+
+  const toggleReplyRecommendation = (enabled: boolean) =>
+    modal.confirm({
+      title: enabled ? 'AI 답장 추천 켜기' : 'AI 답장 추천 끄기',
+      content: enabled
+        ? '켜면 이 방의 모든 영상에 답장 추천이 생깁니다. 영상 올린 본인에게는 나오지 않습니다.'
+        : '끄면 이 방의 영상에 답장 추천이 더 이상 나오지 않습니다.',
+      okText: enabled ? '켜기' : '끄기',
+      cancelText: '닫기',
+      onOk: async () => {
+        try {
+          await replyRecoMut.mutateAsync(enabled)
+          message.success(enabled ? 'AI 답장 추천을 켰습니다.' : 'AI 답장 추천을 껐습니다.')
+        } catch (e) {
+          message.error(e instanceof ApiError && e.code !== 'NETWORK' ? e.message : 'AI 답장 추천 변경에 실패했습니다.')
+        }
+      },
+    })
 
   const memberColumns: ColumnsType<RoomMember> = [
     { title: '유저 ID', dataIndex: 'user_id', width: 90, render: (v: number) => <a onClick={() => navigate(`/users/${v}`)}>{v}</a> },
@@ -260,6 +280,20 @@ export default function RoomDetailPage() {
                       options={[{ value: 'OPERATIONAL', label: '운영방' }, { value: 'TEST', label: '테스트방' }]}
                     />
                   ) : <RoomTypeTag isTest={data.is_test} />}
+                </Descriptions.Item>
+                <Descriptions.Item label="AI 답장 추천" span={3}>
+                  <Space size={8}>
+                    {canWrite && (
+                      <Switch
+                        aria-label="AI 답장 추천 켜기/끄기"
+                        size="small"
+                        checked={data.reply_recommendation_enabled ?? false}
+                        loading={replyRecoMut.isPending}
+                        onChange={toggleReplyRecommendation}
+                      />
+                    )}
+                    {data.reply_recommendation_enabled ? <Tag color="green">켜짐</Tag> : <Tag>꺼짐</Tag>}
+                  </Space>
                 </Descriptions.Item>
                 <Descriptions.Item label="상태">
                   <RoomStatusTag status={data.status} />

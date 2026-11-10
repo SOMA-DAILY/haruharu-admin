@@ -89,6 +89,8 @@ export const roomsApi = {
   detail: (roomId: number) => get<RoomDetail>(`/rooms/${roomId}`),
   updateType: (roomId: number, isTest: boolean) =>
     patch<{ room_id: number; is_test: boolean }>(`/rooms/${roomId}/type`, { is_test: isTest }),
+  updateReplyRecommendation: (roomId: number, enabled: boolean) =>
+    patch<RoomDetail>(`/rooms/${roomId}/reply-recommendation`, { enabled }),
   // 쓰기 (SUPER·OPERATOR)
   create: (body: CreateRoomBody) => post<RoomCreated>('/rooms', body),
   invites: (roomId: number) => get<RoomInvite[]>(`/rooms/${roomId}/invites`),

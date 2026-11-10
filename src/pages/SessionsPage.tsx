@@ -1,5 +1,5 @@
 import { useEffect, useState, type Key } from 'react'
-import { Card, Table, Select, DatePicker, Space, Button, Alert, Empty, Tooltip, Typography, Collapse, Segmented, Modal, Form, Input, App, Skeleton } from 'antd'
+import { Card, Table, Select, DatePicker, Space, Button, Alert, Empty, Tooltip, Typography, Collapse, Segmented, Modal, Form, Input, App, Skeleton, Tag } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -55,7 +55,17 @@ function RoomActivityCell({ room, kind }: { room: RoomListItem; kind: 'uploads' 
 }
 
 const columns: ColumnsType<RoomListItem> = [
-  { title: '방 ID', dataIndex: 'room_id', width: 90 },
+  {
+    title: '방 ID',
+    dataIndex: 'room_id',
+    width: 110,
+    render: (id: number, r) => (
+      <Space size={4}>
+        {id}
+        {r.reply_recommendation_enabled && <Tooltip title="AI 답장 추천 켜짐"><Tag color="green" style={{ marginInlineEnd: 0 }}>AI</Tag></Tooltip>}
+      </Space>
+    ),
+  },
   { title: '구분', dataIndex: 'is_test', width: 90, render: (value: boolean | null) => <RoomTypeTag isTest={value} /> },
   { title: '상태', dataIndex: 'status', width: 100, render: (s: RoomStatus) => <RoomStatusTag status={s} /> },
   { title: '예정일', dataIndex: 'scheduled_date', width: 120 },

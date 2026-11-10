@@ -52,6 +52,7 @@ type FormValues = {
   total_days: number
   max_uses?: number
   invite_expires_at?: Dayjs
+  reply_recommendation_enabled?: boolean
 }
 
 // ===== 채팅 편성 (E0) =====
@@ -390,6 +391,7 @@ export default function CreateRoomModal({ open, onClose, groups }: { open: boole
         total_days: v.total_days,
         max_uses: v.max_uses ?? null,
         invite_expires_at: v.invite_expires_at ? fmt(v.invite_expires_at) : null,
+        reply_recommendation_enabled: v.reply_recommendation_enabled ?? false,
         missions,
       })
       setCreated({ ...res, is_test: v.room_type === 'TEST' })
@@ -460,7 +462,7 @@ export default function CreateRoomModal({ open, onClose, groups }: { open: boole
           }
         />
       ) : (
-        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ group_id: groups[0]?.id, room_type: 'OPERATIONAL', total_days: 3, max_uses: 6 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} onValuesChange={onValuesChange} requiredMark={false} initialValues={{ group_id: groups[0]?.id, room_type: 'OPERATIONAL', total_days: 3, max_uses: 6, reply_recommendation_enabled: false }}>
           <Form.Item name="group_id" label="기수"><Select aria-label="새 방 기수" placeholder="기수 미지정" options={groups.map(g => ({ value: g.id, label: g.name }))} /></Form.Item>
           <Form.Item name="room_type" label="방 구분" rules={[{ required: true, message: '방 구분을 선택하세요.' }]}>
             <Select options={[{ value: 'OPERATIONAL', label: '운영방' }, { value: 'TEST', label: '테스트방' }]} />
@@ -492,6 +494,9 @@ export default function CreateRoomModal({ open, onClose, groups }: { open: boole
               <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm" />
             </Form.Item>
           </div>
+          <Form.Item name="reply_recommendation_enabled" valuePropName="checked" extra="켜면 이 방의 모든 영상에 답장 추천이 생깁니다. 영상 올린 본인에게는 나오지 않습니다.">
+            <Checkbox>AI 답장 추천 사용</Checkbox>
+          </Form.Item>
 
           <ChatScheduleSection
             rows={scheduleRows}
