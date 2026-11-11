@@ -94,6 +94,7 @@ export interface RoomListItem {
   female_count: number
   male_count: number
   started_at: string | null
+  reply_recommendation_enabled?: boolean // 방 단위 AI 답장 추천 (BE #559. 옛 서버 응답엔 없음)
 }
 
 export interface RoomMember {
@@ -123,6 +124,7 @@ export interface RoomDetail {
   starts_at?: string | null
   final_selection_opens_at?: string | null
   ends_at?: string | null
+  reply_recommendation_enabled?: boolean // 방 단위 AI 답장 추천 (BE #559. 옛 서버 응답엔 없음)
   member_count: number
   female_count: number
   male_count: number
@@ -186,6 +188,7 @@ export interface CreateRoomBody {
   total_days: number
   max_uses?: number | null
   invite_expires_at?: string | null
+  reply_recommendation_enabled?: boolean // 없으면 서버 기본 false
   missions?: RoomMissionBody[] // 최대 100개. 서버 기본 미션 없음
 }
 export interface RoomCreated {

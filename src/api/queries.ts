@@ -66,6 +66,17 @@ export const useUpdateRoomType = (roomId: number) => {
   })
 }
 
+export const useUpdateRoomReplyRecommendation = (roomId: number) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (enabled: boolean) => roomsApi.updateReplyRecommendation(roomId, enabled),
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: ['room', roomId] }),
+      qc.invalidateQueries({ queryKey: ['rooms'] }),
+    ]),
+  })
+}
+
 export const useRoomGroups = () => useQuery({
   queryKey: ['room-groups'],
   queryFn: async () => {
